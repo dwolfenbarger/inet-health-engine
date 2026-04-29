@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+@layer base {
+  * { box-sizing: border-box; }
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background: #080b12;
+    color: #ddeeff;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: #0d1526; }
+  ::-webkit-scrollbar-thumb { background: #1a2a44; border-radius: 2px; }
+}
+
+@keyframes pulse-ring {
+  0%   { transform: scale(0.8); opacity: 0.8; }
+  100% { transform: scale(2.0); opacity: 0; }
+}
+@keyframes flicker {
+  0%,100% { opacity: 1; }
+  92%      { opacity: 1; }
+  93%      { opacity: 0.7; }
+  94%      { opacity: 1; }
+}
+@keyframes ticker-scroll {
+  0%   { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+.pulse-ring::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  animation: pulse-ring 2s ease-out infinite;
+}
+.noc-glow { filter: drop-shadow(0 0 6px currentColor); }
+.ticker-text { animation: ticker-scroll 40s linear infinite; }
+
+/* Mobile optimisations */
+@media (max-width: 768px) {
+  /* Prevent double-tap zoom on interactive elements */
+  button, a, [role="button"] {
+    touch-action: manipulation;
+  }
+  /* Ensure minimum 44px tap targets */
+  button {
+    min-height: 44px;
+  }
+  /* Smooth momentum scrolling on iOS */
+  .mobile-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+  /* Prevent text selection on tap-hold */
+  .globe-label {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
