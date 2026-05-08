@@ -58,6 +58,8 @@ A world-class internet health and routing intelligence platform for senior netwo
 
 ## Quickstart
 
+> **For a complete install, configuration, operations, and troubleshooting reference, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).** This Quickstart is the 2-minute version.
+
 ### Prerequisites
 - Docker Desktop 29.2.1+ (with Compose v5)
 - A Cloudflare API token with Radar read access
