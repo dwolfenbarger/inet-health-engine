@@ -53,7 +53,7 @@ app.conf.update(
             "schedule": 90,    # every 90s — live stream window
             "options":  {"queue": "bgp"},
         },
-        # Legacy stub/PyBGPStream cycle kept but infrequent
+        # Synthetic legacy BGP cycle is disabled; RIS is the live routing source.
         "traffic-collect": {
             "task":     "collectors.tasks.traffic.run_traffic_cycle",
             "schedule": 300,

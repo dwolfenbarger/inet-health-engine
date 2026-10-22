@@ -172,9 +172,9 @@ async def write_updates_batched(pool, updates: list[BGPUpdate], rpki_map: dict |
                 """, [
                     (u.time, u.prefix, u.origin_asn,
                      u.as_path, u.communities,
-                     u.change_type.value, u.collector,
+                     getattr(u.change_type, "value", u.change_type), u.collector,
                      u.peer_asn, u.next_hop,
-                     (rpki_map or {}).get((u.prefix, u.origin_asn), u.rpki_status.value if u.rpki_status else "unknown"))
+                     (rpki_map or {}).get((u.prefix, u.origin_asn), getattr(u.rpki_status, "value", u.rpki_status) if u.rpki_status else "unknown"))
                     for u in batch
                 ])
             total += len(batch)
@@ -197,7 +197,7 @@ async def write_anomalies_batched(pool, anomalies: list[BGPAnomaly]):
                     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
                     ON CONFLICT DO NOTHING
                 """, [
-                    (a.time, str(a.event_id), a.event_type.value,
+                    (a.time, str(a.event_id), getattr(a.event_type, "value", a.event_type),
                      a.affected_prefix, a.origin_asn, a.expected_asn,
                      a.severity, a.confidence,
                      f"ris/{a.affected_prefix or 'global'}")
@@ -218,7 +218,7 @@ async def publish_ris_to_redis(updates: list[BGPUpdate], anomalies: list[BGPAnom
         for a in anomalies:
             if a.severity >= 3:
                 await r.xadd("raw.anomalies", {
-                    "event_type":      a.event_type.value,
+                    "event_type":      getattr(a.event_type, "value", a.event_type),
                     "affected_prefix": a.affected_prefix or "",
                     "origin_asn":      str(a.origin_asn or ""),
                     "severity":        str(a.severity),
@@ -301,7 +301,7 @@ async def run_collection_cycle(window_seconds: int):
     # Deduplicate: keep highest-confidence anomaly per (prefix, event_type)
     seen: dict[tuple, BGPAnomaly] = {}
     for a in all_anomalies:
-        key = (a.affected_prefix or "", a.event_type.value, a.origin_asn or 0)
+        key = (a.affected_prefix or "", getattr(a.event_type, "value", a.event_type), a.origin_asn or 0)
         if key not in seen or a.confidence > seen[key].confidence:
             seen[key] = a
     anomalies = list(seen.values())
