@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS bgp_updates (
     collector       TEXT,
     peer_asn        INTEGER,
     next_hop        INET,
+    next_hop_raw    TEXT,
     rpki_status     TEXT
 );
 SELECT create_hypertable('bgp_updates', 'time', if_not_exists => TRUE);

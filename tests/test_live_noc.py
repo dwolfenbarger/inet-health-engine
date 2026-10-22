@@ -41,6 +41,23 @@ class LiveIntegrityTests(unittest.TestCase):
         self.assertEqual(rows[0].next_hop,'192.0.2.2')
         self.assertIsNone(rows[1].next_hop)
 
+    def test_ipv6_next_hop_pair_is_preserved_without_breaking_inet_storage(self):
+        pair='2001:7f8:54::71,fe80::2e6b:f500:449:894a'
+        rows=parse_ris_message({'data':{'type':'UPDATE','path':[174,13335],
+            'host':'rrc00.ripe.net','announcements':[{'next_hop':pair,'prefixes':['2606:4700::/32']}]}})
+        self.assertIsNone(rows[0].next_hop)
+        self.assertEqual(rows[0].next_hop_raw,pair)
+        captured=[]
+        class Connection:
+            async def __aenter__(self):return self
+            async def __aexit__(self,*args):pass
+            async def executemany(self,sql,values):captured.extend(values)
+        class Pool:
+            def acquire(self):return Connection()
+        asyncio.run(write_updates_batched(Pool(),rows))
+        self.assertEqual(captured[0][-1],pair)
+        self.assertEqual(captured[0][5],'announce')
+
     def test_failed_storage_cannot_report_success(self):
         class Broken:
             def acquire(self):

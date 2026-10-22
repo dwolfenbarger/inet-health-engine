@@ -56,7 +56,7 @@ async def snapshot(
         stored_asn = asn if asn is None or asn <= 2147483647 else -1
         rows = await pool.fetch("""
             SELECT time, prefix, origin_asn, as_path, communities,
-                   change_type, collector, peer_asn, host(next_hop) AS next_hop, rpki_status
+                   change_type, collector, peer_asn, host(next_hop) AS next_hop, next_hop_raw, rpki_status
             FROM bgp_updates
             WHERE time > NOW() - make_interval(mins => $1)
               AND collector = ANY($2::text[])
@@ -134,6 +134,7 @@ async def snapshot(
                         "Historical AS paths before this release may have lost repeated ASNs.",
                         "Historical candidates without collector attribution are excluded from collector-filtered results.",
                         "Collection is a bounded sample: up to 50,000 updates per 60-second window, scheduled every 90 seconds.",
+                        "The next_hop_raw field preserves multi-address IPv6 attributes; next_hop is null when not a single address.",
                         "Complex AS_SET paths cannot be represented by the current schema and have an empty AS sequence."],
         "metadata_source": "https://ris.ripe.net/docs/route-collectors/",
     }

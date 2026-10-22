@@ -5,6 +5,7 @@ VENGEANCE: 5 collectors, 60s window, no memory cap, 25K batch inserts.
 import asyncio, json, signal, time
 from datetime import datetime, timezone
 from collections import defaultdict
+from ipaddress import ip_address
 
 import httpx, structlog
 
@@ -34,6 +35,16 @@ RIS_COLLECTORS = ["rrc00", "rrc11", "rrc14", "rrc16", "rrc21"]
 # No memory cap on VENGEANCE (31GB RAM). Batch raised from Pi-era 5K to 25K.
 MAX_UPDATES = 50_000  # Explicit bounded sample; not a continuous full feed.
 BATCH_SIZE     = 25_000   # 25K rows/transaction is well within TimescaleDB capacity
+
+
+def single_next_hop(value):
+    """INET stores one address; retain multi-address values separately, losslessly."""
+    if not value:
+        return None
+    try:
+        return str(ip_address(value))
+    except ValueError:
+        return None
 
 
 def parse_ris_message(raw: dict) -> list[BGPUpdate]:
@@ -75,7 +86,8 @@ def parse_ris_message(raw: dict) -> list[BGPUpdate]:
                     time=dt, prefix=prefix, origin_asn=origin_asn,
                     as_path=as_path, communities=communities,
                     change_type=BGPChangeType.ANNOUNCE, collector=collector,
-                    peer_asn=peer_asn, next_hop=ann.get("next_hop"),
+                    peer_asn=peer_asn, next_hop=single_next_hop(ann.get("next_hop")),
+                    next_hop_raw=ann.get("next_hop"),
                     rpki_status=RPKIStatus.UNKNOWN,
                 ))
             except Exception:
@@ -169,15 +181,15 @@ async def write_updates_batched(pool, updates: list[BGPUpdate], rpki_map: dict |
                 await conn.executemany("""
                     INSERT INTO bgp_updates
                         (time, prefix, origin_asn, as_path, communities,
-                         change_type, collector, peer_asn, next_hop, rpki_status)
-                    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+                         change_type, collector, peer_asn, next_hop, rpki_status, next_hop_raw)
+                    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
                     ON CONFLICT DO NOTHING
                 """, [
                     (u.time, u.prefix, u.origin_asn,
                      u.as_path, u.communities,
                      getattr(u.change_type, "value", u.change_type), u.collector,
                      u.peer_asn, u.next_hop,
-                     (rpki_map or {}).get((u.prefix, u.origin_asn), getattr(u.rpki_status, "value", u.rpki_status) if u.rpki_status else "unknown"))
+                     (rpki_map or {}).get((u.prefix, u.origin_asn), getattr(u.rpki_status, "value", u.rpki_status) if u.rpki_status else "unknown"), u.next_hop_raw)
                     for u in batch
                 ])
             total += len(batch)
