@@ -32,6 +32,7 @@ RIS_CLIENT_ID = "inet-health-engine/0.1"
 RIS_COLLECTORS = ["rrc00", "rrc11", "rrc14", "rrc16", "rrc21"]
 
 # No memory cap on VENGEANCE (31GB RAM). Batch raised from Pi-era 5K to 25K.
+MAX_UPDATES = 50_000  # Explicit bounded sample; not a continuous full feed.
 BATCH_SIZE     = 25_000   # 25K rows/transaction is well within TimescaleDB capacity
 
 
@@ -144,7 +145,10 @@ async def stream_ris_live(window_seconds: int) -> list[BGPUpdate]:
                     parsed = parse_ris_message(raw)
                     msg_count += 1
 
-                    updates.extend(parsed)
+                    updates.extend(parsed[:MAX_UPDATES-len(updates)])
+                    if len(updates) >= MAX_UPDATES:
+                        log.info("ris_stream_sample_capped", limit=MAX_UPDATES)
+                        break
 
     except httpx.TimeoutException:
         log.info("ris_stream_window_complete")
@@ -193,14 +197,14 @@ async def write_anomalies_batched(pool, anomalies: list[BGPAnomaly]):
                 await conn.executemany("""
                     INSERT INTO bgp_anomalies
                         (time, event_id, event_type, affected_prefix,
-                         origin_asn, expected_asn, severity, confidence, source)
-                    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+                         origin_asn, expected_asn, severity, confidence, source, raw_data)
+                    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
                     ON CONFLICT DO NOTHING
                 """, [
                     (a.time, str(a.event_id), getattr(a.event_type, "value", a.event_type),
                      a.affected_prefix, a.origin_asn, a.expected_asn,
                      a.severity, a.confidence,
-                     f"ris/{a.affected_prefix or 'global'}")
+                     a.source, json.dumps(a.raw_data))
                     for a in batch
                 ])
         except Exception as e:
@@ -296,12 +300,16 @@ async def run_collection_cycle(window_seconds: int):
         log.warning("rpki_inline_enrichment_failed", error=str(_e))
     all_anomalies: list[BGPAnomaly] = []
     for u in updates:
-        all_anomalies.extend(run_anomaly_detection(u))
+        for anomaly in run_anomaly_detection(u):
+            all_anomalies.append(anomaly.model_copy(update={
+                "source": f"ris/{u.collector}",
+                "raw_data": {**anomaly.raw_data, "collector": u.collector, "peer_asn": u.peer_asn},
+            }))
 
     # Deduplicate: keep highest-confidence anomaly per (prefix, event_type)
     seen: dict[tuple, BGPAnomaly] = {}
     for a in all_anomalies:
-        key = (a.affected_prefix or "", getattr(a.event_type, "value", a.event_type), a.origin_asn or 0)
+        key = (a.affected_prefix or "", getattr(a.event_type, "value", a.event_type), a.origin_asn or 0, a.source, a.raw_data.get("peer_asn"))
         if key not in seen or a.confidence > seen[key].confidence:
             seen[key] = a
     anomalies = list(seen.values())
@@ -323,6 +331,12 @@ async def run_collection_cycle(window_seconds: int):
     await write_updates_batched(pool, updates, _rpki_map)
     # Only persist quality anomalies — skip very low confidence noise
     await write_anomalies_batched(pool, quality_anomalies)
+
+    # Evict expired viewpoint state so a long-lived worker stays bounded.
+    cutoff = time.time() - 300
+    for key, entries in list(_prefix_flap_tracker.items()):
+        if not entries or entries[-1][0] < cutoff:
+            del _prefix_flap_tracker[key]
 
     # ── Flush updated caches back to Redis ────────────────────────────
     await asyncio.gather(
