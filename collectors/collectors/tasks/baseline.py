@@ -1,6 +1,7 @@
 """collectors/tasks/baseline.py — Celery task for baseline modeler."""
 
-import asyncio
+from collectors.task_loop import run_async
+
 import time
 from collectors.celery_app import app
 import structlog
@@ -39,7 +40,7 @@ def run_baseline_cycle(self):
         return score
 
     try:
-        result = asyncio.run(_run())
+        result = run_async(_run())
         log.info("baseline_task_complete",
                  health_score=result.get("health_score"),
                  elapsed_s=round(time.time() - start, 2))

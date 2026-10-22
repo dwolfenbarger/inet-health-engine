@@ -5,7 +5,12 @@ Phase 1 + Phase 2 tasks.
 """
 
 from celery import Celery
+from celery.signals import worker_process_shutdown
+from collectors.task_loop import close_task_loop
+
 from collectors.config import settings
+
+worker_process_shutdown.connect(close_task_loop, weak=False)
 
 app = Celery(
     "inet-health-engine",
