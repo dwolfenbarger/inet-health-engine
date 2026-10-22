@@ -85,8 +85,9 @@ async def snapshot(
               AND ($2::integer IS NULL OR origin_asn = $2)
               AND ($3::text IS NULL OR affected_prefix = $3)
               AND ($4 = 'all' OR ($4 = '6') = (position(':' in affected_prefix) > 0))
+              AND ($5 = 'all' OR source = $6)
             ORDER BY time DESC LIMIT 100
-        """, minutes, stored_asn, prefix, family)
+        """, minutes, stored_asn, prefix, family, collector, f"ris/{collector}")
     except Exception as exc:
         # Do not expose DB connection details or silently return a healthy empty result.
         import structlog
@@ -131,6 +132,8 @@ async def snapshot(
                         "Anomaly candidates are heuristic signals, not confirmed hijacks or outages.",
                         "Congestion, packet loss and latency are not established by this BGP feed.",
                         "Historical AS paths before this release may have lost repeated ASNs.",
-                        "Signals lack collector attribution and are not filtered by the collector selector."],
+                        "Historical candidates without collector attribution are excluded from collector-filtered results.",
+                        "Collection is a bounded sample: up to 50,000 updates per 60-second window, scheduled every 90 seconds.",
+                        "Complex AS_SET paths cannot be represented by the current schema and have an empty AS sequence."],
         "metadata_source": "https://ris.ripe.net/docs/route-collectors/",
     }
