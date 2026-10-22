@@ -70,7 +70,7 @@ async def ensure_rpki_tables():
             CREATE TABLE IF NOT EXISTS rpki_status (
                 time        TIMESTAMPTZ NOT NULL,
                 prefix      TEXT NOT NULL,
-                origin_asn  INTEGER NOT NULL,
+                origin_asn  BIGINT NOT NULL,
                 status      TEXT NOT NULL,  -- valid | invalid | not-found
                 roa_count   INTEGER DEFAULT 0,
                 source      TEXT,

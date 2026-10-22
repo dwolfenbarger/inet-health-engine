@@ -9,12 +9,12 @@ CREATE EXTENSION IF NOT EXISTS timescaledb;
 CREATE TABLE IF NOT EXISTS bgp_updates (
     time            TIMESTAMPTZ NOT NULL,
     prefix          TEXT NOT NULL,
-    origin_asn      INTEGER,
-    as_path         INTEGER[],
+    origin_asn      BIGINT,
+    as_path         BIGINT[],
     communities     TEXT[],
     change_type     TEXT,
     collector       TEXT,
-    peer_asn        INTEGER,
+    peer_asn        BIGINT,
     next_hop        INET,
     next_hop_raw    TEXT,
     rpki_status     TEXT
@@ -29,8 +29,8 @@ CREATE TABLE IF NOT EXISTS bgp_anomalies (
     event_id        UUID DEFAULT gen_random_uuid(),
     event_type      TEXT NOT NULL,
     affected_prefix TEXT,
-    origin_asn      INTEGER,
-    expected_asn    INTEGER,
+    origin_asn      BIGINT,
+    expected_asn    BIGINT,
     severity        SMALLINT,
     confidence      REAL,
     source          TEXT,
@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS traffic_metrics (
     time            TIMESTAMPTZ NOT NULL,
     region          TEXT,
     country_code    TEXT,
-    asn             INTEGER,
+    asn             BIGINT,
     metric_type     TEXT,
     value           DOUBLE PRECISION,
     source          TEXT
@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS network_events (
     event_type              TEXT NOT NULL,
     severity                SMALLINT,
     confidence              REAL,
-    affected_asns           INTEGER[],
+    affected_asns           BIGINT[],
     affected_prefixes       TEXT[],
     affected_regions        TEXT[],
     tech_signal_count       INTEGER DEFAULT 0,
@@ -84,7 +84,7 @@ CREATE INDEX IF NOT EXISTS network_events_asns_idx ON network_events USING GIN (
 CREATE TABLE IF NOT EXISTS rpki_status (
     time            TIMESTAMPTZ NOT NULL,
     prefix          TEXT NOT NULL,
-    origin_asn      INTEGER,
+    origin_asn      BIGINT,
     status          TEXT,
     max_length      INTEGER,
     roa_count       INTEGER DEFAULT 0,
@@ -117,7 +117,7 @@ CREATE INDEX IF NOT EXISTS atlas_target_idx ON atlas_measurements (target, time 
 -- AS HEALTH SCORES - time series per AS (asn=0 = global)
 CREATE TABLE IF NOT EXISTS as_health (
     time            TIMESTAMPTZ NOT NULL,
-    asn             INTEGER NOT NULL,
+    asn             BIGINT NOT NULL,
     health_score    REAL,
     prefix_count_v4 INTEGER,
     prefix_count_v6 INTEGER,

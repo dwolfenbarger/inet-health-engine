@@ -51,16 +51,15 @@ async def snapshot(
     now = datetime.now(timezone.utc)
     try:
         pool = await get_pg_pool()
-        # Origin index remains usable for normal allocated ASN ranges. The
-        # existing integer schema cannot contain ASNs above signed int32.
-        stored_asn = asn if asn is None or asn <= 2147483647 else -1
+        # BIGINT stores every unsigned four-byte ASN, including observed reserved values.
+        stored_asn = asn
         rows = await pool.fetch("""
             SELECT time, prefix, origin_asn, as_path, communities,
                    change_type, collector, peer_asn, host(next_hop) AS next_hop, next_hop_raw, rpki_status
             FROM bgp_updates
             WHERE time > NOW() - make_interval(mins => $1)
               AND collector = ANY($2::text[])
-              AND ($3::integer IS NULL OR origin_asn = $3)
+              AND ($3::bigint IS NULL OR origin_asn = $3)
               AND ($4::text IS NULL OR prefix = $4)
               AND ($5 = 'all' OR ($5 = '6') = (position(':' in prefix) > 0))
               AND ($6 = 'all' OR collector = $6)
@@ -82,7 +81,7 @@ async def snapshot(
             FROM bgp_anomalies
             WHERE time > NOW() - make_interval(mins => $1)
               AND source LIKE 'ris/%'
-              AND ($2::integer IS NULL OR origin_asn = $2)
+              AND ($2::bigint IS NULL OR origin_asn = $2)
               AND ($3::text IS NULL OR affected_prefix = $3)
               AND ($4 = 'all' OR ($4 = '6') = (position(':' in affected_prefix) > 0))
               AND ($5 = 'all' OR source = $6)
