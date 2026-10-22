@@ -35,8 +35,8 @@ export function VitalsStrip() {
       <div style={{ display:'flex', alignItems:'center', gap:4,
         background:`${col}0e`, border:`1px solid ${col}22`,
         borderRadius:3, padding:'2px 7px' }}>
-        <span style={{ color:'#4a7090', fontSize:7, letterSpacing:'.06em' }}>{label}</span>
-        <span style={{ color:col, fontSize:9, fontWeight:700, fontFamily:'monospace' }}>
+        <span style={{ color:'#4a7090', fontSize:11, letterSpacing:'.06em' }}>{label}</span>
+        <span style={{ color:col, fontSize:13, fontWeight:700, fontFamily:'monospace' }}>
           {sign}{z.toFixed(1)}σ
         </span>
       </div>
@@ -55,7 +55,7 @@ export function VitalsStrip() {
         borderRadius:4, padding:'3px 10px', flexShrink:0 }}>
         <div style={{ width:6, height:6, borderRadius:'50%',
           background:hsc, boxShadow:`0 0 6px ${hsc}` }} />
-        <span style={{ color:'#5a8090', fontSize:7, letterSpacing:'.08em' }}>HEALTH</span>
+        <span style={{ color:'#5a8090', fontSize:11, letterSpacing:'.08em' }}>HEALTH</span>
         <span style={{ color:hsc, fontSize:13, fontWeight:700, lineHeight:1 }}>
           {hs !== null ? hs!.toFixed(1) : '—'}
         </span>
@@ -74,7 +74,7 @@ export function VitalsStrip() {
       {/* BGP rate */}
       <div style={{ display:'flex', alignItems:'center', gap:4, flexShrink:0 }}>
         <span style={{ color:'#3a6070', fontSize:7 }}>UPD/H</span>
-        <span style={{ color:'#00ccee', fontSize:10, fontWeight:700 }}>
+        <span style={{ color:'#00ccee', fontSize:12, fontWeight:700 }}>
           {updateRate1h > 0 ? `${(updateRate1h/1000).toFixed(0)}K` : '—'}
         </span>
       </div>
@@ -82,17 +82,17 @@ export function VitalsStrip() {
       {/* Collectors */}
       <div style={{ display:'flex', alignItems:'center', gap:4, flexShrink:0 }}>
         <span style={{ color:'#3a6070', fontSize:7 }}>RIS</span>
-        <span style={{ color:'#00aaff', fontSize:10, fontWeight:700 }}>{collectorCount}</span>
+        <span style={{ color:'#00aaff', fontSize:12, fontWeight:700 }}>{collectorCount}</span>
       </div>
 
       <div style={{ width:1, height:20, background:'#0d2035', flexShrink:0 }} />
 
       {/* Anomaly type breakdown */}
-      {flapCnt > 0   && <span style={{ color:'#ff3b3b', fontSize:9, fontWeight:700 }}>F:{flapCnt}</span>}
-      {hijackCnt > 0 && <span style={{ color:'#ffdd00', fontSize:9, fontWeight:700 }}>H:{hijackCnt}</span>}
-      {surgeCnt > 0  && <span style={{ color:'#ff8800', fontSize:9, fontWeight:700 }}>S:{surgeCnt}</span>}
+      {flapCnt > 0   && <span style={{ color:'#ff3b3b', fontSize:13, fontWeight:700 }}>F:{flapCnt}</span>}
+      {hijackCnt > 0 && <span style={{ color:'#ffdd00', fontSize:13, fontWeight:700 }}>H:{hijackCnt}</span>}
+      {surgeCnt > 0  && <span style={{ color:'#ff8800', fontSize:13, fontWeight:700 }}>S:{surgeCnt}</span>}
       {hiSev > 0     && (
-        <span style={{ color:'#ff3b3b', fontSize:8, background:'#ff3b3b18',
+        <span style={{ color:'#ff3b3b', fontSize:12, background:'#ff3b3b18',
           border:'1px solid #ff3b3b44', borderRadius:2, padding:'0 5px' }}>
           {hiSev} S4+
         </span>

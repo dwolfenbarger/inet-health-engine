@@ -111,7 +111,7 @@ export function NOCTopBar() {
           <div>
             <div style={{ color:'#00ccee', fontSize:12, letterSpacing:'.2em',
               fontWeight:700, fontFamily:'monospace' }}>INET·HEALTH</div>
-            <div style={{ color:'#4a7090', fontSize:'7px', letterSpacing:'.12em',
+            <div style={{ color:'#4a7090', fontSize:'11px', letterSpacing:'.12em',
               fontFamily:'monospace' }}>NETWORK INTELLIGENCE · VENGEANCE</div>
           </div>
         </div>
@@ -127,20 +127,20 @@ export function NOCTopBar() {
                   fontFamily:'monospace', textShadow:`0 0 14px ${hsc}66` }}>
                   {hsDisplay}
                 </div>
-                <div style={{ color:'#8fc4dc', fontSize:'7px', letterSpacing:'.1em' }}>HEALTH</div>
+                <div style={{ color:'#8fc4dc', fontSize:'11px', letterSpacing:'.1em' }}>HEALTH</div>
               </>
             ) : (
               <>
                 <div style={{ color:'#4a9fc8', fontSize:12, fontWeight:700,
                   fontFamily:'monospace', letterSpacing:'.1em' }}>—</div>
-                <div style={{ color:'#4a7090', fontSize:'7px', letterSpacing:'.08em' }}>COMPUTING</div>
+                <div style={{ color:'#4a7090', fontSize:'11px', letterSpacing:'.08em' }}>COMPUTING</div>
               </>
             )}
           </div>
           {sparkVals.length >= 2
             ? <Sparkline values={sparkVals} color={hsc} />
             : <div style={{ width:90, height:30, display:'flex', alignItems:'center',
-                justifyContent:'center', color:'#4a6070', fontSize:'7px' }}>loading…</div>
+                justifyContent:'center', color:'#4a6070', fontSize:'11px' }}>loading…</div>
           }
           {/* Z-score context — shows what's driving the score */}
           {zscores && (
@@ -153,8 +153,8 @@ export function NOCTopBar() {
                 const zc = Math.abs(z) > 3 ? '#ff3b3b' : Math.abs(z) > 1.5 ? '#ffaa00' : '#00ee88'
                 return (
                   <div key={k} style={{ display:'flex', gap:5, alignItems:'center', marginBottom:1 }}>
-                    <span style={{ color:'#4a7090', fontSize:'7px', width:26 }}>{label}</span>
-                    <span style={{ color:zc, fontSize:'8px', fontWeight:700, fontFamily:'monospace' }}>
+                    <span style={{ color:'#4a7090', fontSize:'11px', width:26 }}>{label}</span>
+                    <span style={{ color:zc, fontSize:'12px', fontWeight:700, fontFamily:'monospace' }}>
                       {z > 0 ? '+' : ''}{z.toFixed(1)}σ
                     </span>
                   </div>
@@ -167,27 +167,27 @@ export function NOCTopBar() {
         {/* ── Anomaly breakdown ──────────────────────────────── */}
         <div style={{ background:'#06101c', border:'1px solid #0d2035',
           borderRadius:4, padding:'4px 10px', flexShrink:0 }}>
-          <div style={{ color:'#4a7090', fontSize:'7px', letterSpacing:'.1em', marginBottom:3 }}>
+          <div style={{ color:'#4a7090', fontSize:'11px', letterSpacing:'.1em', marginBottom:3 }}>
             ANOMALIES
           </div>
           <div style={{ display:'flex', gap:8, alignItems:'center' }}>
             {flapCnt > 0 && (
-              <span style={{ color:'#ff3b3b', fontSize:'9px', fontWeight:700,
+              <span style={{ color:'#ff3b3b', fontSize:'13px', fontWeight:700,
                 fontFamily:'monospace' }}>F:{flapCnt}</span>
             )}
             {hijackCnt > 0 && (
-              <span style={{ color:'#ffdd00', fontSize:'9px', fontWeight:700,
+              <span style={{ color:'#ffdd00', fontSize:'13px', fontWeight:700,
                 fontFamily:'monospace' }}>H:{hijackCnt}</span>
             )}
             {surgeCnt > 0 && (
-              <span style={{ color:'#ff8800', fontSize:'9px', fontWeight:700,
+              <span style={{ color:'#ff8800', fontSize:'13px', fontWeight:700,
                 fontFamily:'monospace' }}>S:{surgeCnt}</span>
             )}
             {flapCnt === 0 && hijackCnt === 0 && surgeCnt === 0 && (
-              <span style={{ color:'#2a5060', fontSize:'9px', fontFamily:'monospace' }}>—</span>
+              <span style={{ color:'#2a5060', fontSize:'13px', fontFamily:'monospace' }}>—</span>
             )}
             {hiSev > 0 && (
-              <span style={{ color:'#ff3b3b', fontSize:'8px', background:'#ff3b3b18',
+              <span style={{ color:'#ff3b3b', fontSize:'12px', background:'#ff3b3b18',
                 border:'1px solid #ff3b3b44', borderRadius:2, padding:'0 4px' }}>
                 {hiSev} S4+
               </span>
@@ -198,7 +198,7 @@ export function NOCTopBar() {
         {/* ── Data source health ─────────────────────────────── */}
         <div style={{ background:'#06101c', border:'1px solid #0d2035',
           borderRadius:4, padding:'4px 10px', flexShrink:0 }}>
-          <div style={{ color:'#4a7090', fontSize:'7px', letterSpacing:'.1em', marginBottom:3 }}>
+          <div style={{ color:'#4a7090', fontSize:'11px', letterSpacing:'.1em', marginBottom:3 }}>
             DATA SOURCES
           </div>
           <div style={{ display:'flex', gap:6, alignItems:'center' }}>
@@ -213,12 +213,12 @@ export function NOCTopBar() {
                     background: ok ? '#00ee88' : '#ff3b3b',
                     boxShadow: ok ? '0 0 4px #00ee88' : '0 0 4px #ff3b3b' }} />
                   <span style={{ color: ok ? '#4a8060' : '#ff3b3b',
-                    fontSize:'7px', fontFamily:'monospace' }}>{short}</span>
+                    fontSize:'11px', fontFamily:'monospace' }}>{short}</span>
                 </div>
               )
             })}
             {Object.keys(dataSources).length === 0 && (
-              <span style={{ color:'#2a4050', fontSize:'7px' }}>—</span>
+              <span style={{ color:'#2a4050', fontSize:'11px' }}>—</span>
             )}
           </div>
         </div>
@@ -231,7 +231,7 @@ export function NOCTopBar() {
           <div style={{ color:'#00ccee', fontSize:13, fontWeight:700, fontFamily:'monospace' }}>
             {updateRate1h > 0 ? `${(updateRate1h/1000).toFixed(0)}K` : '—'}
           </div>
-          <div style={{ color:'#4a7090', fontSize:'7px', fontFamily:'monospace' }}>UPD/H</div>
+          <div style={{ color:'#4a7090', fontSize:'11px', fontFamily:'monospace' }}>UPD/H</div>
         </div>
 
         {/* ── UTC clock + WS status ──────────────────────────── */}
@@ -242,14 +242,14 @@ export function NOCTopBar() {
               background: wsConnected ? '#00ee88' : '#ff3b3b',
               boxShadow: wsConnected ? '0 0 6px #00ee88' : 'none' }} />
             <span style={{ color: wsConnected ? '#00ee88' : '#ff3b3b',
-              fontSize:'8px', fontFamily:'monospace', fontWeight:700 }}>
+              fontSize:'12px', fontFamily:'monospace', fontWeight:700 }}>
               {wsConnected ? 'LIVE' : 'OFFLINE'}
             </span>
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:4, justifyContent:'flex-end' }}>
-            <span style={{ color:'#4a7090', fontSize:'7px', fontFamily:'monospace',
+            <span style={{ color:'#4a7090', fontSize:'11px', fontFamily:'monospace',
               letterSpacing:'.06em' }}>UTC</span>
-            <span style={{ color:'#8fc4dc', fontSize:'10px', fontFamily:'monospace',
+            <span style={{ color:'#8fc4dc', fontSize:'12px', fontFamily:'monospace',
               letterSpacing:'.08em', fontWeight:700 }}>{utcTime}</span>
           </div>
         </div>

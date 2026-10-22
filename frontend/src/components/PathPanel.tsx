@@ -16,7 +16,7 @@ export function PathPanel() {
 
   return (
     <div style={{ padding:16, height:'100%', display:'flex', flexDirection:'column', overflowY:'auto', fontFamily:'monospace' }}>
-      <div style={{ color:'#4a9fc8', fontSize:'8px', letterSpacing:'.12em', marginBottom:14 }}>
+      <div style={{ color:'#4a9fc8', fontSize:'12px', letterSpacing:'.12em', marginBottom:14 }}>
         AS PATH ANALYSIS · Neo4j + TimescaleDB
       </div>
       <div style={{ display:'flex', gap:8, marginBottom:14, alignItems:'center' }}>
@@ -25,7 +25,7 @@ export function PathPanel() {
           const lbl = k==='src' ? 'SOURCE ASN' : 'DEST ASN'
           return (
             <div key={k} style={{ flex:1 }}>
-              <div style={{ color:'#6aa8c0', fontSize:'8px', marginBottom:3 }}>{lbl}</div>
+              <div style={{ color:'#6aa8c0', fontSize:'12px', marginBottom:3 }}>{lbl}</div>
               <input type="number" placeholder="e.g. 13335"
                 value={asn ?? ''} onChange={e => {
                   const v = e.target.value ? parseInt(e.target.value) : null
@@ -40,7 +40,7 @@ export function PathPanel() {
         <button onClick={() => { setPathMode(true) }} style={{
           background:'#aa44ff22', border:'1px solid #aa44ff55', borderRadius:4,
           color:'#aa44ff', padding:'6px 12px', cursor:'pointer',
-          fontSize:'9px', fontFamily:'monospace', marginTop:13,
+          fontSize:'13px', fontFamily:'monospace', marginTop:13,
         }}>PICK ON GLOBE</button>
       </div>
       <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:14 }}>
@@ -48,7 +48,7 @@ export function PathPanel() {
           <button key={asn} onClick={() => setPathSrc(parseInt(asn))} style={{
             background:'transparent', border:`1px solid ${m.color}44`,
             borderRadius:3, color:m.color, padding:'2px 7px',
-            cursor:'pointer', fontSize:'8px', fontFamily:'monospace',
+            cursor:'pointer', fontSize:'12px', fontFamily:'monospace',
           }}>AS{asn}</button>
         ))}
       </div>
@@ -61,7 +61,7 @@ export function PathPanel() {
               .map(([l,v]) => (
                 <div key={l as string}>
                   <div style={{ color:'#aa44ff', fontSize:18, fontWeight:700 }}>{v}</div>
-                  <div style={{ color:'#6aa8c0', fontSize:'8px' }}>{l}</div>
+                  <div style={{ color:'#6aa8c0', fontSize:'12px' }}>{l}</div>
                 </div>
             ))}
           </div>
@@ -70,11 +70,11 @@ export function PathPanel() {
               borderLeft:`3px solid ${p.path_type==='graph'?'#aa44ff':'#ffaa00'}`,
               borderRadius:4, padding:'9px 11px', marginBottom:8 }}>
               <div style={{ display:'flex', gap:8, marginBottom:6 }}>
-                <span style={{ color:p.path_type==='graph'?'#aa44ff':'#ffaa00', fontSize:'8px' }}>
+                <span style={{ color:p.path_type==='graph'?'#aa44ff':'#ffaa00', fontSize:'12px' }}>
                   {p.path_type === 'graph' ? '◆ GRAPH' : '● OBSERVED'}
                 </span>
-                <span style={{ color:'#7ab8d4', fontSize:'8px' }}>{p.hops} hops</span>
-                {p.prefix && <span style={{ color:'#6aa8c0', fontSize:'8px' }}>{p.prefix}</span>}
+                <span style={{ color:'#7ab8d4', fontSize:'12px' }}>{p.hops} hops</span>
+                {p.prefix && <span style={{ color:'#6aa8c0', fontSize:'12px' }}>{p.prefix}</span>}
               </div>
               <div style={{ display:'flex', alignItems:'center', flexWrap:'wrap', gap:3 }}>
                 {p.asns?.map((asn:number,j:number) => {
@@ -84,7 +84,7 @@ export function PathPanel() {
                       <span style={{
                         color:m?.color??'#ddeeff', background:m?`${m.color}15`:'#0a1828',
                         border:`1px solid ${m?.color??'#8fc4dc'}44`,
-                        borderRadius:3, fontSize:'9px', padding:'2px 6px',
+                        borderRadius:3, fontSize:'13px', padding:'2px 6px',
                       }}>AS{asn}{m?` · ${m.short}`:''}</span>
                       {j<p.asns.length-1&&<span style={{color:'#8fc4dc'}}>→</span>}
                     </span>

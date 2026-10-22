@@ -12,11 +12,13 @@ from fastapi.middleware.cors import CORSMiddleware
 import structlog
 
 from api.deps import get_pg_pool, get_redis, get_es, close_all
+from api.routes_noc import router as noc_router
 from api.routes_bgp     import router as bgp_router
 from api.routes_events  import router as events_router
 from api.routes_traffic import router as traffic_router
 from api.routes_intelligence import router as intelligence_router
 from api.routes_globe import router as globe_router
+from api.routes_assessment import router as assessment_router
 from api.routes_events_lifecycle import router as lifecycle_router
 from api.ws             import websocket_endpoint, redis_stream_listener
 
@@ -57,11 +59,13 @@ app.add_middleware(
 )
 
 # ── Routers ──────────────────────────────────
+app.include_router(noc_router, prefix="/api/v1")
 app.include_router(bgp_router,     prefix="/api/v1")
 app.include_router(events_router,  prefix="/api/v1")
 app.include_router(traffic_router,      prefix="/api/v1")
 app.include_router(intelligence_router, prefix="/api/v1")
 app.include_router(globe_router,        prefix="/api/v1")
+app.include_router(assessment_router, prefix="/api/v1")
 app.include_router(lifecycle_router,    prefix="/api/v1")
 
 
@@ -108,21 +112,23 @@ async def global_status():
         )
         community_signals_1h = es_count["count"]
     except Exception:
-        community_signals_1h = 0
+        community_signals_1h = None
 
     d = dict(pg_counts)
     return {
-        "global_health_score":    _compute_health_score(d),
+        "global_health_score":    None,
+        "assessment_scope": "Partial routing observations; global health is unknown",
         "bgp_updates_1h":         d["bgp_updates_1h"],
         "anomalies_1h":           d["anomalies_1h"],
         "high_severity_events_1h": d["high_severity_1h"],
         "active_events":          d["active_events"],
         "community_signals_1h":   community_signals_1h,
         "last_bgp_update":        d["last_bgp_update"],
+        "observation_state": "fresh" if d["last_bgp_update"] and (datetime.now(timezone.utc)-d["last_bgp_update"]).total_seconds() < 240 else "stale",
         "data_sources": {
-            "timescaledb":    "healthy",
-            "elasticsearch":  "healthy",
-            "redis":          "healthy",
+            "timescaledb":    "connected",
+            "elasticsearch":  "connected" if community_signals_1h is not None else "unavailable",
+            "redis":          "not_probed",
         },
     }
 

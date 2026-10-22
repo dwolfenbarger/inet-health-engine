@@ -59,6 +59,7 @@ class BGPUpdate(BaseModel):
     collector:    str             # ripe-ris | routeviews
     peer_asn:     Optional[int]   = None
     next_hop:     Optional[str]   = None
+    next_hop_raw: Optional[str]   = None  # Original RIS value, including IPv6 address pairs
     rpki_status:  RPKIStatus      = RPKIStatus.UNKNOWN
 
     class Config:

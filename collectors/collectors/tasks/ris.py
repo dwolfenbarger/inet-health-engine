@@ -1,5 +1,7 @@
 """collectors/tasks/ris.py — Celery task for RIPE RIS collector."""
-import asyncio, time
+
+from collectors.task_loop import run_async
+import time
 from collectors.celery_app import app
 import structlog
 
@@ -16,7 +18,7 @@ def run_ris_cycle(self):
     log.info("ris_task_start", task_id=self.request.id)
     start = time.time()
     try:
-        asyncio.run(run_collection_cycle(settings.bgp_window_seconds))
+        run_async(run_collection_cycle(settings.bgp_window_seconds))
         elapsed = round(time.time()-start, 2)
         log.info("ris_task_complete", elapsed_s=elapsed)
         return {"status":"ok","elapsed_s":elapsed}

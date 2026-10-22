@@ -8,10 +8,10 @@ const PANEL_W = 224  // expanded panel width
 
 const S = {
   section: { borderBottom:'1px solid #0a1a2e', padding:'10px 12px' },
-  hdr: { color:'#4a9fc8', fontSize:'8px', letterSpacing:'.14em', marginBottom:8 },
+  hdr: { color:'#4a9fc8', fontSize:'12px', letterSpacing:'.14em', marginBottom:8 },
   row: { display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 },
-  label: { color:'#8fc4dc', fontSize:'10px' },
-  val: { color:'#00ccee', fontSize:'10px', minWidth:28, textAlign:'right' as const },
+  label: { color:'#8fc4dc', fontSize:'12px' },
+  val: { color:'#00ccee', fontSize:'12px', minWidth:28, textAlign:'right' as const },
 }
 
 // Icon-strip button
@@ -27,7 +27,7 @@ function IconBtn({ icon, label, active, color, onClick }:
     }}>
       <span style={{ fontSize:14, lineHeight:1 }}>{icon}</span>
       <span style={{ color: active ? (color ?? '#00ccee') : '#3a5a70',
-        fontSize:'6px', fontFamily:'monospace', letterSpacing:'.06em' }}>
+        fontSize:'11px', fontFamily:'monospace', letterSpacing:'.06em' }}>
         {label.slice(0,4)}
       </span>
     </button>
@@ -55,7 +55,7 @@ function Toggle({ label, color, value, count, onChange }:
             color: hasEvents ? color : '#2a4050',
             background: hasEvents ? `${color}18` : 'transparent',
             border:`1px solid ${hasEvents ? color+'44' : '#1a3040'}`,
-            borderRadius:3, fontSize:'8px', padding:'0 5px',
+            borderRadius:3, fontSize:'12px', padding:'0 5px',
             fontWeight: hasEvents ? 700 : 400, minWidth:24,
             textAlign:'center' as const, transition:'all .3s',
           }}>
@@ -66,7 +66,7 @@ function Toggle({ label, color, value, count, onChange }:
           background: value ? `${color}22` : '#0a1828',
           border:`1px solid ${value ? color+'55' : '#2a4050'}`,
           borderRadius:3, color: value ? color : '#4a7090',
-          padding:'2px 7px', cursor:'pointer', fontSize:'8px',
+          padding:'2px 7px', cursor:'pointer', fontSize:'12px',
           fontFamily:'inherit', transition:'all .2s',
         }}>{value ? 'ON' : 'OFF'}</button>
       </div>
@@ -223,7 +223,7 @@ export function ControlPanel() {
             {pathMode && (
               <div style={{ background:'#0a1828', borderRadius:4, padding:'6px 8px',
                 marginTop:6, border:'1px solid #aa44ff33',
-                fontSize:'9px', color:'#8fc4dc', lineHeight:1.6 }}>
+                fontSize:'13px', color:'#8fc4dc', lineHeight:1.6 }}>
                 Click 1st AS = source<br/>
                 Click 2nd AS = dest<br/>
                 Path draws automatically
@@ -235,7 +235,7 @@ export function ControlPanel() {
             <button onClick={resetControls} style={{
               width:'100%', background:'#0a1828', border:'1px solid #0d2035',
               borderRadius:4, color:'#7ab8d4', padding:'6px', cursor:'pointer',
-              fontSize:'9px', fontFamily:'inherit', letterSpacing:'.08em',
+              fontSize:'13px', fontFamily:'inherit', letterSpacing:'.08em',
             }}>RESET ALL</button>
           </div>
         </div>

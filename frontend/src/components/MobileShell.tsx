@@ -49,12 +49,12 @@ function MobileTopBar({ tab, setTab }: { tab: MobileTab; setTab: (t: MobileTab) 
               background: wsConnected ? '#00ee88' : '#ff3b3b',
               boxShadow: wsConnected ? '0 0 5px #00ee88' : 'none' }} />
             <span style={{ color: wsConnected ? '#00ee88' : '#ff3b3b',
-              fontSize:8, fontFamily:'monospace' }}>
+              fontSize:12, fontFamily:'monospace' }}>
               {wsConnected ? 'LIVE' : 'OFFLINE'}
             </span>
           </div>
           {hiSev > 0 && (
-            <span style={{ color:'#ff3b3b', fontSize:8, background:'#ff3b3b18',
+            <span style={{ color:'#ff3b3b', fontSize:12, background:'#ff3b3b18',
               border:'1px solid #ff3b3b44', borderRadius:2, padding:'0 5px' }}>
               {hiSev} S4+
             </span>
@@ -79,7 +79,7 @@ function MobileTopBar({ tab, setTab }: { tab: MobileTab; setTab: (t: MobileTab) 
             cursor:'pointer', fontFamily:'monospace',
           }}>
             <span style={{ fontSize:16 }}>{t.icon}</span>
-            <span style={{ fontSize:7, letterSpacing:'.1em' }}>{t.label}</span>
+            <span style={{ fontSize:11, letterSpacing:'.1em' }}>{t.label}</span>
           </button>
         ))}
       </div>
@@ -121,7 +121,7 @@ function MobileStatusView() {
           lineHeight:1, textShadow:`0 0 20px ${hsc}55`, fontFamily:'monospace' }}>
           {hs !== null ? hs!.toFixed(1) : '—'}
         </div>
-        <div style={{ color:`${hsc}88`, fontSize:10, letterSpacing:'.2em', marginTop:6 }}>
+        <div style={{ color:`${hsc}88`, fontSize:12, letterSpacing:'.2em', marginTop:6 }}>
           INTERNET HEALTH SCORE
         </div>
         {zscores && (
@@ -157,7 +157,7 @@ function MobileStatusView() {
             padding:'12px 8px', textAlign:'center' }}>
             <div style={{ color: p.count > 0 ? p.color : `${p.color}44`,
               fontSize:22, fontWeight:700, lineHeight:1 }}>{p.count}</div>
-            <div style={{ color:'#4a7090', fontSize:8, marginTop:3,
+            <div style={{ color:'#4a7090', fontSize:12, marginTop:3,
               letterSpacing:'.06em' }}>{p.label}</div>
           </div>
         ))}
@@ -167,18 +167,18 @@ function MobileStatusView() {
       {status?.data_sources && (
         <div style={{ background:'#06101c', border:'1px solid #0d2035',
           borderRadius:6, padding:'12px', marginBottom:14 }}>
-          <div style={{ color:'#4a9fc8', fontSize:9, letterSpacing:'.1em', marginBottom:8 }}>
+          <div style={{ color:'#4a9fc8', fontSize:13, letterSpacing:'.1em', marginBottom:8 }}>
             DATA SOURCES
           </div>
           {Object.entries(status.data_sources).map(([name, state]: any) => (
             <div key={name} style={{ display:'flex', justifyContent:'space-between',
               alignItems:'center', padding:'6px 0',
               borderBottom:'1px solid #0a1828' }}>
-              <span style={{ color:'#8fc4dc', fontSize:10, textTransform:'uppercase' as const }}>
+              <span style={{ color:'#8fc4dc', fontSize:12, textTransform:'uppercase' as const }}>
                 {name}
               </span>
               <span style={{ color: state === 'healthy' ? '#00ee88' : '#ff3b3b',
-                fontSize:10, fontWeight:700 }}>
+                fontSize:12, fontWeight:700 }}>
                 {state === 'healthy' ? '● OK' : '● DOWN'}
               </span>
             </div>
@@ -189,7 +189,7 @@ function MobileStatusView() {
       {/* Top escalated events */}
       {escalated.length > 0 && (
         <div>
-          <div style={{ color:'#ff3b3b', fontSize:9, letterSpacing:'.1em', marginBottom:8 }}>
+          <div style={{ color:'#ff3b3b', fontSize:13, letterSpacing:'.1em', marginBottom:8 }}>
             ESCALATED ({escalated.length})
           </div>
           {escalated.slice(0,5).map((e: any, i: number) => {
@@ -200,10 +200,10 @@ function MobileStatusView() {
                 padding:'10px 12px', marginBottom:6 }}>
                 <div style={{ display:'flex', gap:6, alignItems:'center', marginBottom:4 }}>
                   <span style={{ fontSize:13 }}>{eventIcon(e.event_type)}</span>
-                  <span style={{ color:ec, fontSize:10, fontWeight:700, flex:1 }}>
+                  <span style={{ color:ec, fontSize:12, fontWeight:700, flex:1 }}>
                     {e.event_type.replace(/_/g,' ').toUpperCase()}
                   </span>
-                  <span style={{ color:severityColor(e.peak_severity), fontSize:10,
+                  <span style={{ color:severityColor(e.peak_severity), fontSize:12,
                     fontWeight:700 }}>S{e.peak_severity}</span>
                 </div>
                 <div style={{ color:'#ddeeff', fontSize:10 }}>
@@ -211,10 +211,10 @@ function MobileStatusView() {
                   {e.origin_country ? ` · ${e.origin_country}` : ''}
                 </div>
                 {e.affected_prefix && (
-                  <div style={{ color:'#6a9ab0', fontSize:9, fontFamily:'monospace',
+                  <div style={{ color:'#6a9ab0', fontSize:13, fontFamily:'monospace',
                     marginTop:2 }}>{e.affected_prefix}</div>
                 )}
-                <div style={{ color:'#4a7090', fontSize:8, marginTop:4 }}>
+                <div style={{ color:'#4a7090', fontSize:12, marginTop:4 }}>
                   {e.duration_human} · {e.occurrence_count}× ·{' '}
                   {(e.peak_confidence*100).toFixed(0)}% conf
                 </div>
@@ -326,7 +326,7 @@ function MobileGlobeControls() {
             fontFamily: 'monospace',
             pointerEvents: 'auto',
           }}>
-            <div style={{ color:'#4a9fc8', fontSize:9, letterSpacing:'.12em', marginBottom:12 }}>
+            <div style={{ color:'#4a9fc8', fontSize:13, letterSpacing:'.12em', marginBottom:12 }}>
               GLOBE FILTERS
             </div>
 
@@ -334,7 +334,7 @@ function MobileGlobeControls() {
             <div style={{ marginBottom:12 }}>
               <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
                 <span style={{ color:'#8fc4dc', fontSize:10 }}>Min Severity</span>
-                <span style={{ color:'#00ccee', fontSize:10, fontFamily:'monospace' }}>
+                <span style={{ color:'#00ccee', fontSize:12, fontFamily:'monospace' }}>
                   S{c.severityMin}
                 </span>
               </div>
@@ -352,7 +352,7 @@ function MobileGlobeControls() {
             <div style={{ marginBottom:12 }}>
               <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
                 <span style={{ color:'#8fc4dc', fontSize:10 }}>Min Confidence</span>
-                <span style={{ color:'#00ccee', fontSize:10, fontFamily:'monospace' }}>
+                <span style={{ color:'#00ccee', fontSize:12, fontFamily:'monospace' }}>
                   {Math.round(c.confidenceMin * 100)}%
                 </span>
               </div>
@@ -377,10 +377,10 @@ function MobileGlobeControls() {
                       background: on ? '#00ccee18' : 'rgba(3,8,16,0.6)',
                       border: `1px solid ${on ? '#00ccee55' : '#1a3a50'}`,
                       borderRadius:8, color: on ? '#00ccee' : '#4a6070',
-                      fontSize:9, fontFamily:'monospace', cursor:'pointer',
+                      fontSize:13, fontFamily:'monospace', cursor:'pointer',
                     }}>
                     {label}<br />
-                    <span style={{ fontSize:8, opacity:.7 }}>{on ? 'ON' : 'OFF'}</span>
+                    <span style={{ fontSize:12, opacity:.7 }}>{on ? 'ON' : 'OFF'}</span>
                   </button>
                 )
               })}
@@ -409,10 +409,10 @@ function MobileVitals() {
       </span>
       <span style={{ color:`${hsc}66`, fontSize:8 }}>HEALTH</span>
       <div style={{ width:1, height:18, background:'#0d2035', flexShrink:0 }} />
-      {flapCnt > 0  && <span style={{ color:'#ff3b3b', fontSize:9, fontWeight:700 }}>F:{flapCnt}</span>}
-      {hijCnt  > 0  && <span style={{ color:'#ffdd00', fontSize:9, fontWeight:700 }}>H:{hijCnt}</span>}
+      {flapCnt > 0  && <span style={{ color:'#ff3b3b', fontSize:13, fontWeight:700 }}>F:{flapCnt}</span>}
+      {hijCnt  > 0  && <span style={{ color:'#ffdd00', fontSize:13, fontWeight:700 }}>H:{hijCnt}</span>}
       {hiSev   > 0  && (
-        <span style={{ color:'#ff3b3b', fontSize:8, background:'#ff3b3b18',
+        <span style={{ color:'#ff3b3b', fontSize:12, background:'#ff3b3b18',
           border:'1px solid #ff3b3b44', borderRadius:2, padding:'0 5px' }}>
           {hiSev} S4+
         </span>

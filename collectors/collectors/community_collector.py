@@ -253,7 +253,7 @@ async def collect_x_recent(client: httpx.AsyncClient) -> list[dict]:
     """
     if not settings.x_bearer_token:
         log.warning("x_token_missing", msg="Skipping X — no bearer token")
-        return _x_stub()
+        return []  # Missing credentials never create synthetic signals.
 
     signals = []
     query = (
@@ -456,11 +456,11 @@ async def collect_nanog(client: httpx.AsyncClient) -> list[dict]:
         log.info("nanog_collected", threads_checked=len(threads), signals=len(signals))
 
     except ImportError:
-        log.warning("bs4_not_installed", msg="Using NANOG stub")
-        return _nanog_stub()
+        log.warning("bs4_not_installed", msg="Skipping NANOG; parser unavailable")
+        return []  # An unavailable source is unknown, not a fixture.
     except Exception as e:
         log.warning("nanog_collection_error", error=str(e))
-        return _nanog_stub()
+        return []  # An unavailable source is unknown, not a fixture.
 
     return signals
 

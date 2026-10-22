@@ -5,7 +5,12 @@ Phase 1 + Phase 2 tasks.
 """
 
 from celery import Celery
+from celery.signals import worker_process_shutdown
+from collectors.task_loop import close_task_loop
+
 from collectors.config import settings
+
+worker_process_shutdown.connect(close_task_loop, weak=False)
 
 app = Celery(
     "inet-health-engine",
@@ -13,6 +18,7 @@ app = Celery(
     backend=settings.redis_url,
     include=[
         "collectors.tasks.bgp",
+        "collectors.tasks.hijack",
         "collectors.tasks.traffic",
         "collectors.tasks.community",
         "collectors.tasks.baseline",
@@ -36,11 +42,18 @@ app.conf.update(
 
     beat_schedule={
         # ── Phase 1 ──────────────────────────────────
-        "bgp-collect": {
-            "task":     "collectors.tasks.bgp.run_bgp_cycle",
+        # Live RIPE RIS stream (replaces stub BGP cycle)
+        "hijack-scan": {
+            "task":     "collectors.tasks.hijack.run_hijack_scan",
             "schedule": 300,
             "options":  {"queue": "bgp"},
         },
+        "ris-collect": {
+            "task":     "collectors.tasks.ris.run_ris_cycle",
+            "schedule": 90,    # every 90s — live stream window
+            "options":  {"queue": "bgp"},
+        },
+        # Synthetic legacy BGP cycle is disabled; RIS is the live routing source.
         "traffic-collect": {
             "task":     "collectors.tasks.traffic.run_traffic_cycle",
             "schedule": 300,

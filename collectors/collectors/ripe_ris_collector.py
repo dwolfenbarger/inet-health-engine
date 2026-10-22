@@ -5,6 +5,7 @@ VENGEANCE: 5 collectors, 60s window, no memory cap, 25K batch inserts.
 import asyncio, json, signal, time
 from datetime import datetime, timezone
 from collections import defaultdict
+from ipaddress import ip_address
 
 import httpx, structlog
 
@@ -27,11 +28,23 @@ RIS_LIVE_URL  = "https://ris-live.ripe.net/v1/stream/"
 RIS_CLIENT_ID = "inet-health-engine/0.1"
 
 # 5 strategic collectors — global coverage, Pi-safe volume
-# rrc00=Amsterdam rrc11=NYC rrc14=PaloAlto rrc16=Singapore rrc21=SaoPaulo
+# Approximate collector cities: Amsterdam, New York, Palo Alto, Miami, Paris.
+# https://ris.ripe.net/docs/route-collectors/
 RIS_COLLECTORS = ["rrc00", "rrc11", "rrc14", "rrc16", "rrc21"]
 
 # No memory cap on VENGEANCE (31GB RAM). Batch raised from Pi-era 5K to 25K.
+MAX_UPDATES = 50_000  # Explicit bounded sample; not a continuous full feed.
 BATCH_SIZE     = 25_000   # 25K rows/transaction is well within TimescaleDB capacity
+
+
+def single_next_hop(value):
+    """INET stores one address; retain multi-address values separately, losslessly."""
+    if not value:
+        return None
+    try:
+        return str(ip_address(value))
+    except ValueError:
+        return None
 
 
 def parse_ris_message(raw: dict) -> list[BGPUpdate]:
@@ -45,17 +58,20 @@ def parse_ris_message(raw: dict) -> list[BGPUpdate]:
     host      = data.get("host", "rrc00.ripe.net")
     collector = host.split(".")[0]
     peer_asn  = int(data.get("peer_asn", 0)) or None
-    next_hop  = data.get("peer")
 
-    # Deduplicate AS path prepends
-    as_path, seen = [], set()
+    # Preserve repeated ASNs: prepending and loops are routing evidence.
+    # AS_SET segments cannot be represented by the current integer[] schema;
+    # omit that path rather than fabricate an ordered sequence.
+    as_path = []
+    ambiguous = False
     for a in data.get("path", []):
         try:
             n = int(a)
-            if n not in seen:
-                as_path.append(n); seen.add(n)
+            as_path.append(n)
         except (ValueError, TypeError):
-            pass
+            ambiguous = True
+    if ambiguous:
+        as_path = []
     origin_asn = as_path[-1] if as_path else None
 
     communities = [
@@ -70,7 +86,8 @@ def parse_ris_message(raw: dict) -> list[BGPUpdate]:
                     time=dt, prefix=prefix, origin_asn=origin_asn,
                     as_path=as_path, communities=communities,
                     change_type=BGPChangeType.ANNOUNCE, collector=collector,
-                    peer_asn=peer_asn, next_hop=next_hop or ann.get("next_hop"),
+                    peer_asn=peer_asn, next_hop=single_next_hop(ann.get("next_hop")),
+                    next_hop_raw=ann.get("next_hop"),
                     rpki_status=RPKIStatus.UNKNOWN,
                 ))
             except Exception:
@@ -89,7 +106,7 @@ def parse_ris_message(raw: dict) -> list[BGPUpdate]:
                 time=dt, prefix=str(prefix), origin_asn=withdraw_origin,
                 as_path=as_path, communities=communities,
                 change_type=BGPChangeType.WITHDRAW, collector=collector,
-                peer_asn=peer_asn, next_hop=next_hop,
+                peer_asn=peer_asn, next_hop=None,
                 rpki_status=RPKIStatus.UNKNOWN,
             ))
         except Exception:
@@ -139,7 +156,10 @@ async def stream_ris_live(window_seconds: int) -> list[BGPUpdate]:
                     parsed = parse_ris_message(raw)
                     msg_count += 1
 
-                    updates.extend(parsed)
+                    updates.extend(parsed[:MAX_UPDATES-len(updates)])
+                    if len(updates) >= MAX_UPDATES:
+                        log.info("ris_stream_sample_capped", limit=MAX_UPDATES)
+                        break
 
     except httpx.TimeoutException:
         log.info("ris_stream_window_complete")
@@ -161,20 +181,21 @@ async def write_updates_batched(pool, updates: list[BGPUpdate], rpki_map: dict |
                 await conn.executemany("""
                     INSERT INTO bgp_updates
                         (time, prefix, origin_asn, as_path, communities,
-                         change_type, collector, peer_asn, next_hop, rpki_status)
-                    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+                         change_type, collector, peer_asn, next_hop, rpki_status, next_hop_raw)
+                    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
                     ON CONFLICT DO NOTHING
                 """, [
                     (u.time, u.prefix, u.origin_asn,
                      u.as_path, u.communities,
-                     str(u.change_type), u.collector,
+                     getattr(u.change_type, "value", u.change_type), u.collector,
                      u.peer_asn, u.next_hop,
-                     (rpki_map or {}).get((u.prefix, u.origin_asn), str(u.rpki_status) if u.rpki_status else "unknown"))
+                     (rpki_map or {}).get((u.prefix, u.origin_asn), getattr(u.rpki_status, "value", u.rpki_status) if u.rpki_status else "unknown"), u.next_hop_raw)
                     for u in batch
                 ])
             total += len(batch)
         except Exception as e:
             log.warning("batch_write_error", batch=i, error=str(e))
+            raise
     log.info("updates_written", total=total)
 
 
@@ -187,18 +208,19 @@ async def write_anomalies_batched(pool, anomalies: list[BGPAnomaly]):
                 await conn.executemany("""
                     INSERT INTO bgp_anomalies
                         (time, event_id, event_type, affected_prefix,
-                         origin_asn, expected_asn, severity, confidence, source)
-                    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+                         origin_asn, expected_asn, severity, confidence, source, raw_data)
+                    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
                     ON CONFLICT DO NOTHING
                 """, [
-                    (a.time, str(a.event_id), str(a.event_type),
+                    (a.time, str(a.event_id), getattr(a.event_type, "value", a.event_type),
                      a.affected_prefix, a.origin_asn, a.expected_asn,
                      a.severity, a.confidence,
-                     f"ris/{a.affected_prefix or 'global'}")
+                     a.source, json.dumps(a.raw_data))
                     for a in batch
                 ])
         except Exception as e:
             log.warning("anomaly_write_error", batch=i, error=str(e))
+            raise
 
 
 async def publish_ris_to_redis(updates: list[BGPUpdate], anomalies: list[BGPAnomaly]):
@@ -211,7 +233,7 @@ async def publish_ris_to_redis(updates: list[BGPUpdate], anomalies: list[BGPAnom
         for a in anomalies:
             if a.severity >= 3:
                 await r.xadd("raw.anomalies", {
-                    "event_type":      str(a.event_type),
+                    "event_type":      getattr(a.event_type, "value", a.event_type),
                     "affected_prefix": a.affected_prefix or "",
                     "origin_asn":      str(a.origin_asn or ""),
                     "severity":        str(a.severity),
@@ -289,12 +311,16 @@ async def run_collection_cycle(window_seconds: int):
         log.warning("rpki_inline_enrichment_failed", error=str(_e))
     all_anomalies: list[BGPAnomaly] = []
     for u in updates:
-        all_anomalies.extend(run_anomaly_detection(u))
+        for anomaly in run_anomaly_detection(u):
+            all_anomalies.append(anomaly.model_copy(update={
+                "source": f"ris/{u.collector}",
+                "raw_data": {**anomaly.raw_data, "collector": u.collector, "peer_asn": u.peer_asn},
+            }))
 
     # Deduplicate: keep highest-confidence anomaly per (prefix, event_type)
     seen: dict[tuple, BGPAnomaly] = {}
     for a in all_anomalies:
-        key = (a.affected_prefix or "", str(a.event_type), a.origin_asn or 0)
+        key = (a.affected_prefix or "", getattr(a.event_type, "value", a.event_type), a.origin_asn or 0, a.source, a.raw_data.get("peer_asn"))
         if key not in seen or a.confidence > seen[key].confidence:
             seen[key] = a
     anomalies = list(seen.values())
@@ -309,56 +335,19 @@ async def run_collection_cycle(window_seconds: int):
              unique_asns=len({u.origin_asn for u in updates if u.origin_asn}),
              anomalies=len(anomalies))
 
-    # RIPE Stat bgp-state enrichment: query routing table to confirm anomalous prefixes.
-    # Adjusts confidence +0.15 if routing table corroborates detected origin, -0.10 if not.
-    # Cap 30 prefixes/cycle to respect stat.ripe.net rate limits.
-    _quality_pre = [a for a in anomalies if a.severity >= 2 and a.confidence >= 0.5]
-    _anom_pfxs   = list({a.affected_prefix for a in _quality_pre
-                          if a.affected_prefix and "/" in a.affected_prefix})[:30]
-    _bgp_state: dict = {}
-    if _anom_pfxs:
-        try:
-            import httpx as _hx
-            async with _hx.AsyncClient(timeout=8, follow_redirects=True) as _hxc:
-                _raw = await asyncio.gather(
-                    *[_hxc.get(
-                        "https://stat.ripe.net/data/bgp-state/data.json",
-                        params={"resource": p, "rrcs": "0,5,11,14,16,21"}
-                      ) for p in _anom_pfxs],
-                    return_exceptions=True
-                )
-            for pfx, resp in zip(_anom_pfxs, _raw):
-                if isinstance(resp, Exception): continue
-                try:
-                    peers = resp.json().get("data", {}).get("bgp_state", [])
-                    if peers:
-                        _bgp_state[pfx] = {
-                            "peer_count":    len(peers),
-                            "seen_origins":  list({p["path"][-1] for p in peers
-                                                   if isinstance(p.get("path"), list) and p["path"]}),
-                        }
-                except Exception:
-                    pass
-            log.info("bgp_state_enriched", prefixes=len(_bgp_state))
-        except Exception as _e:
-            log.warning("bgp_state_enrichment_failed", error=str(_e))
-
-    quality_anomalies = []
-    for _a in _quality_pre:
-        _state = _bgp_state.get(_a.affected_prefix or "")
-        if _state and _a.origin_asn:
-            _origs = set(_state["seen_origins"])
-            _prs   = _state["peer_count"]
-            if _a.origin_asn in _origs and _prs >= 5:
-                _a = _a.copy(update={"confidence": round(min(_a.confidence + 0.15, 0.98), 3)})
-            elif _a.origin_asn not in _origs and _prs >= 5:
-                _a = _a.copy(update={"confidence": round(max(_a.confidence - 0.10, 0.10), 3)})
-        quality_anomalies.append(_a)
+    # Do not boost confidence using RIPEstat: both products use RIS data.
+    quality_anomalies = [a for a in anomalies if a.severity >= 2 and a.confidence >= 0.5]
 
     # Write in batches, publish summary
     await write_updates_batched(pool, updates, _rpki_map)
     # Only persist quality anomalies — skip very low confidence noise
     await write_anomalies_batched(pool, quality_anomalies)
+
+    # Evict expired viewpoint state so a long-lived worker stays bounded.
+    cutoff = time.time() - 300
+    for key, entries in list(_prefix_flap_tracker.items()):
+        if not entries or entries[-1][0] < cutoff:
+            del _prefix_flap_tracker[key]
 
     # ── Flush updated caches back to Redis ────────────────────────────
     await asyncio.gather(

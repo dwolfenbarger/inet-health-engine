@@ -4,7 +4,8 @@ Celery task wrapper for the BGP collector cycle.
 Bridges the async collector into Celery's sync task model.
 """
 
-import asyncio
+from collectors.task_loop import run_async
+
 import time
 from collectors.celery_app import app
 from collectors.config import settings
@@ -25,7 +26,7 @@ log = structlog.get_logger("task.bgp")
 def run_bgp_cycle(self):
     """
     Celery task: one full BGP collection cycle.
-    Runs the async collector in a fresh event loop.
+    Runs the async collector on the worker child's persistent event loop.
     """
     from collectors.bgp_collector import run_collection_cycle
 
@@ -37,7 +38,7 @@ def run_bgp_cycle(self):
         window_start = now - settings.bgp_window_seconds
         window_end   = now
 
-        asyncio.run(run_collection_cycle(window_start, window_end))
+        run_async(run_collection_cycle(window_start, window_end))
 
         elapsed = round(time.time() - start, 2)
         log.info("bgp_task_complete", elapsed_s=elapsed, task_id=self.request.id)

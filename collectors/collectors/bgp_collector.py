@@ -84,7 +84,7 @@ def _build_bgpstream(window_start: int, window_end: int) -> list[dict]:
         import bgpstream  # type: ignore
     except ImportError:
         log.warning("bgpstream_not_installed", msg="PyBGPStream not available, using stub")
-        return _bgpstream_stub(window_start, window_end)
+        raise RuntimeError("PyBGPStream is unavailable; synthetic fallback is disabled")
 
     stream = bgpstream.BGPStream(
         from_time=str(window_start),
@@ -162,10 +162,20 @@ def _bgpstream_stub(window_start: int, window_end: int) -> list[dict]:
         "1.1.1.0/24", "8.8.8.0/24", "9.9.9.0/24",
         "104.16.0.0/12", "13.32.0.0/15", "151.101.0.0/16",
     ]
-    test_asns = [13335, 15169, 8075, 16509, 20940, 32934]
+    # Expanded set of well-known ASNs present in ASN_GEO for richer globe coverage
+    test_asns = [
+        13335, 15169, 8075, 16509, 20940, 32934,   # Cloudflare, Google, Microsoft, Amazon, Akamai, Facebook
+        3356, 174, 1299, 2914, 3257, 6939,         # Lumen, Cogent, Telia, NTT, GTT, Hurricane
+        701, 7018, 7922, 209, 1239, 6461,          # Verizon, AT&T, Comcast, Qwest, Sprint, Zayo
+        2497, 2516, 4713, 4760, 10026,             # IIJ, KDDI, NTT, Telstra, Pacnet
+        4809, 4134, 4837, 9808, 23724,             # China Telecom, Chinanet, China Unicom, CMCC, China169
+        4755, 9498, 55836, 132215,                 # Tata, BHARTI, Reliance, Bharti
+        6453, 3491, 1273, 3320, 5511, 12956,       # TATA, PCCW, Vodafone, DT, Orange, Telefonica
+        2906, 9002, 4637, 7473, 4804,              # Netflix, RETN, Telstra, Singtel, Microplex
+    ]
     results = []
 
-    for _ in range(random.randint(10, 40)):
+    for _ in range(random.randint(80, 150)):
         prefix = random.choice(test_prefixes)
         origin = random.choice(test_asns)
         path_len = random.randint(2, 5)
@@ -254,54 +264,33 @@ def detect_anomalies(update: BGPUpdate) -> list[BGPAnomaly]:
 
 
 def detect_flaps(update: BGPUpdate) -> list[BGPAnomaly]:
+    """Count state transitions for one collector/peer/prefix viewpoint.
+
+    Repeated announcements and updates from other peers are not flaps.
+    Retain at most 100 transitions per key within the configured time window.
     """
-    Detect BGP route flapping — true announce↔withdraw state cycling.
-
-    We track (timestamp, change_type) pairs per prefix.
-    A flap requires alternating announce/withdraw transitions, not just
-    raw update volume (which includes normal multi-peer re-advertisements).
-    """
-    anomalies = []
-    now = time.time()
-    prefix = update.prefix
-
-    # Store (timestamp, change_type) — only record state-relevant changes
-    # Encode: 1=announce, 0=withdraw
-    entry = (now, 1 if update.change_type == BGPChangeType.ANNOUNCE else 0)
-    _prefix_flap_tracker[prefix].append(entry)
-
-    # Trim entries older than the flap window
-    cutoff = now - FLAP_WINDOW_SECONDS
-    _prefix_flap_tracker[prefix] = [
-        e for e in _prefix_flap_tracker[prefix] if e[0] > cutoff
-    ]
-
-    count = len(_prefix_flap_tracker[prefix])
-    if count >= FLAP_THRESHOLD_COUNT:
-        confidence = min(0.4 + (count - FLAP_THRESHOLD_COUNT) * 0.05, 0.85)
-        # Withdrawals carry no AS path — use last known origin from cache
-        # This prevents null-origin flap anomalies from withdrawal messages
-        flap_origin = update.origin_asn
-        if flap_origin is None:
-            cached = _prefix_origin_cache.get(prefix)
-            if cached:
-                flap_origin = cached[0]
-        anomalies.append(BGPAnomaly(
-            time=update.time,
-            event_type=EventType.BGP_FLAP,
-            affected_prefix=prefix,
-            origin_asn=flap_origin,
-            severity=Severity.MEDIUM,
-            confidence=round(confidence, 3),
-            source=f"bgp-collector/{update.collector}",
-            raw_data={
-                "flap_count": count,
-                "window_seconds": FLAP_WINDOW_SECONDS,
-                "peer_asn": update.peer_asn,
-            }
-        ))
-
-    return anomalies
+    key = f"{update.collector}:{update.peer_asn}:{update.prefix}"
+    now = update.time.timestamp()
+    state = 1 if update.change_type == BGPChangeType.ANNOUNCE else 0
+    recent = [e for e in _prefix_flap_tracker[key]
+              if isinstance(e, (list, tuple)) and e[0] > now - FLAP_WINDOW_SECONDS][-100:]
+    if recent and recent[-1][1] == state:
+        _prefix_flap_tracker[key] = recent
+        return []
+    recent.append((now, state))
+    _prefix_flap_tracker[key] = recent[-100:]
+    transitions = len(recent) - 1
+    if transitions < FLAP_THRESHOLD_COUNT:
+        return []
+    return [BGPAnomaly(
+        time=update.time, event_type=EventType.BGP_FLAP,
+        affected_prefix=update.prefix, origin_asn=update.origin_asn,
+        severity=Severity.MEDIUM,
+        confidence=round(min(0.4 + (transitions-FLAP_THRESHOLD_COUNT)*0.05, 0.85), 3),
+        source=f"ris/{update.collector}",
+        raw_data={"transitions": transitions, "window_seconds": FLAP_WINDOW_SECONDS,
+                  "peer_asn": update.peer_asn, "collector": update.collector},
+    )]
 
 
 def detect_withdrawal_surge(update: BGPUpdate) -> list[BGPAnomaly]:

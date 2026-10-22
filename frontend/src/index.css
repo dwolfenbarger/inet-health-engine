@@ -9,6 +9,7 @@
     background: #080b12;
     color: #ddeeff;
     font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+    font-size: 14px;
   }
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: #0d1526; }
