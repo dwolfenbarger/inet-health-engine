@@ -207,3 +207,11 @@ async def clear_withdrawal_counts():
             await r.delete(*keys)
     except Exception as e:
         log.warning("cache_clear_withdrawal_error", error=str(e))
+
+
+async def close_redis():
+    """Close the shared client on its owning task loop during worker shutdown."""
+    global _redis
+    client, _redis = _redis, None
+    if client is not None:
+        await client.aclose()

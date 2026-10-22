@@ -3,7 +3,8 @@ collectors/tasks/traffic.py
 Celery task wrapper for the traffic collector cycle.
 """
 
-import asyncio
+from collectors.task_loop import run_async
+
 import time
 from collectors.celery_app import app
 import structlog
@@ -28,7 +29,7 @@ def run_traffic_cycle(self):
     start = time.time()
 
     try:
-        asyncio.run(run_collection_cycle())
+        run_async(run_collection_cycle())
         elapsed = round(time.time() - start, 2)
         log.info("traffic_task_complete", elapsed_s=elapsed)
         return {"status": "ok", "elapsed_s": elapsed}
