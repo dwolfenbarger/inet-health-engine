@@ -5,11 +5,13 @@ SET LOCAL lock_timeout = '10s';
 SET LOCAL statement_timeout = '10min';
 DO $$
 BEGIN
+  IF to_regclass('timescaledb_information.chunks') IS NOT NULL THEN
   IF EXISTS (SELECT 1 FROM timescaledb_information.chunks
              WHERE is_compressed AND hypertable_schema='public'
              AND hypertable_name IN ('bgp_updates','bgp_anomalies','as_health',
                  'network_events','rpki_status','traffic_metrics')) THEN
     RAISE EXCEPTION 'Compressed ASN tables require a decompression migration plan';
+  END IF;
   END IF;
 END $$;
 ALTER TABLE public.bgp_updates
