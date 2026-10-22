@@ -112,6 +112,21 @@ async def snapshot(
         a = row["origin_asn"]
         if a:
             origins[a] = origins.get(a, 0) + 1
+    # Current validation is distinct from the status cached at ingestion.
+    if routes:
+        import json
+        evidence_rows=await pool.fetch("""SELECT evidence_id,observed_at,payload FROM source_evidence
+            WHERE source='rpki-local' AND evidence_id=ANY($1::text[])
+              AND observed_at>now()-interval '20 minutes'""",
+            [f"{r['prefix']}|{r['origin_asn']}" for r in routes if r['origin_asn']])
+        validations={r['evidence_id']:r for r in evidence_rows}
+        for route in routes:
+            route['rpki_at_ingestion']=route['rpki_status']
+            record=validations.get(f"{route['prefix']}|{route['origin_asn']}")
+            value=record['payload'] if record else None
+            if isinstance(value,str):value=json.loads(value)
+            route['rpki_validation']=value
+            route['rpki_status']=value['status'] if value else 'unknown'
     return {
         "as_of": now, "source": "RIPE RIS Live", "source_state": freshness(latest, now),
         "last_observation": latest, "health_score": None,
@@ -129,7 +144,7 @@ async def snapshot(
         "limitations": ["Sampled update stream, not a complete routing table or proof of reachability.",
                         "Collector coordinates are approximate city locations, not ASN locations or traffic paths.",
                         "Anomaly candidates are heuristic signals, not confirmed hijacks or outages.",
-                        "Congestion, packet loss and latency are not established by this BGP feed.",
+                        "Congestion, packet loss and latency are not established by this BGP feed; inspect separate measurement evidence.",
                         "Historical AS paths before this release may have lost repeated ASNs.",
                         "Historical candidates without collector attribution are excluded from collector-filtered results.",
                         "Collection is a bounded sample: up to 50,000 updates per 60-second window, scheduled every 90 seconds.",

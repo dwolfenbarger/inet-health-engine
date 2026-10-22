@@ -4,6 +4,7 @@ from datetime import datetime,timezone,timedelta
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'collectors'))
 from collectors.public_sources import atlas_record,ioda_record
 from collectors.rpki_collector import parse_validations
+from collectors.vrp_index import VRPIndex
 
 class SourceEvidenceTests(unittest.TestCase):
     def setUp(self):self.now=datetime.now(timezone.utc)
@@ -33,7 +34,22 @@ class SourceEvidenceTests(unittest.TestCase):
         self.assertIsNone(r['payload']['confidence'])
         other={**raw,'until':raw['until']+60}
         self.assertEqual(ioda_record(other,'asn')['id'],r['id'])
+    def test_covering_vrps_multiple_origins_maxlength_and_as0(self):
+        index=VRPIndex([
+            {'prefix':'1.1.0.0/16','asn':'AS13335','maxLength':24,'ta':'apnic'},
+            {'prefix':'1.1.1.0/24','asn':'AS15169','maxLength':24,'ta':'arin'},
+            {'prefix':'2001:db8::/32','asn':'AS0','maxLength':48,'ta':'ripe'},
+            {'prefix':'::/0','asn':'AS4288000245','maxLength':32,'ta':'ripe'}])
+        self.assertEqual(index.validate('1.1.1.0/24',13335)['state'],'valid')
+        self.assertEqual(index.validate('1.1.1.0/24',15169)['state'],'valid')
+        self.assertEqual(index.validate('1.1.1.0/25',13335)['reason'],'length')
+        self.assertEqual(index.validate('1.1.1.0/24',174)['reason'],'as')
+        self.assertEqual(index.validate('9.9.9.0/24',13335)['state'],'not-found')
+        self.assertEqual(index.validate('2001:db8::/48',174)['state'],'invalid')
+        self.assertEqual(index.validate('2001:db8::/32',4288000245)['state'],'valid')
+
     def validation(self,state='valid'):
+
         return {'generatedTime':self.now.isoformat(),'validated_routes':[{
           'route':{'prefix':'1.1.1.0/24','origin_asn':'AS13335'},
           'validity':{'state':state,'VRPs':{'matched':[]},'reason':'as'}}]}

@@ -9,12 +9,13 @@ import redis.asyncio as aioredis
 from datetime import datetime, timezone, timedelta
 import httpx
 from collectors.config import settings
+from collectors.vrp_index import VRPIndex
 from collectors.db import get_pg_pool
 from collectors.source_evidence import save_cycle, source_failure
 
 SOURCE = 'rpki-local'
 BATCH = 500
-MAX_PAIRS = 10000
+MAX_PAIRS = 50000
 
 def parse_validations(data, requested, now=None):
     now = now or datetime.now(timezone.utc)
@@ -69,12 +70,19 @@ async def run_collection_cycle():
                 validator={'version':status['version'],'last_update_done':status['lastUpdateDone'],
                     'tals':{k:{f:v.get(f) for f in ['vrpsFinal','validPublicationPoints',
                               'rejectedPublicationPoints','missingManifests','staleManifests']} for k,v in tals.items()}}
-                for start in range(0,len(pairs),BATCH):
-                    batch=pairs[start:start+BATCH]
-                    response=await client.post('/validity',json={'routes':[
-                        {'prefix':p,'asn':f'AS{a}'} for p,a in batch]})
-                    response.raise_for_status()
-                    records.extend(parse_validations(response.json(),batch))
+                response=await client.get('/json',timeout=120);response.raise_for_status()
+                snapshot=response.json()
+                generated=snapshot['metadata']['generatedTime']
+                index=await asyncio.to_thread(VRPIndex,snapshot['roas'])
+                validator['vrp_count']=index.count
+                del snapshot
+                # Origin checks use covering prefixes for both families. Preserve
+                # all matching and conflicting VRPs, including AS0 authorizations.
+                answers={'generatedTime':generated,'validated_routes':[
+                    {'route':{'prefix':p,'origin_asn':f'AS{a}'},'validity':index.validate(p,a)}
+                    for p,a in pairs]}
+                records=parse_validations(answers,pairs)
+                del index,answers
             await save_cycle(SOURCE,records,{'scope':'Recently observed prefix/origin pairs from the last hour',
                 'cycle_limit':MAX_PAIRS,'cycle_capped':capped,'validated_pairs':len(records),
                 'validator':validator,
