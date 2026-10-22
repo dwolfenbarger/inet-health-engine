@@ -115,10 +115,13 @@ async def snapshot(
     # Current validation is distinct from the status cached at ingestion.
     if routes:
         import json
-        evidence_rows=await pool.fetch("""SELECT evidence_id,observed_at,payload FROM source_evidence
-            WHERE source='rpki-local' AND evidence_id=ANY($1::text[])
-              AND observed_at>now()-interval '20 minutes'""",
-            [f"{r['prefix']}|{r['origin_asn']}" for r in routes if r['origin_asn']])
+        try:
+            evidence_rows=await pool.fetch("""SELECT evidence_id,observed_at,payload FROM source_evidence
+                WHERE source='rpki-local' AND evidence_id=ANY($1::text[])
+                  AND observed_at>now()-interval '20 minutes'""",
+                [f"{r['prefix']}|{r['origin_asn']}" for r in routes if r['origin_asn']])
+        except Exception:
+            raise HTTPException(503,'Current origin validation evidence unavailable') from None
         validations={r['evidence_id']:r for r in evidence_rows}
         for route in routes:
             route['rpki_at_ingestion']=route['rpki_status']
@@ -169,7 +172,8 @@ SOURCE_CATALOG = [
 def source_state(row,now,threshold):
     if not row:return 'unavailable'
     if row['state'] in ['error','unconfigured']:return row['state']
-    if not row['last_success'] or (now-row['last_success']).total_seconds()>threshold:return 'stale'
+    if not row['last_success']:return 'unavailable'
+    if (now-row['last_success']).total_seconds()>threshold:return 'stale'
     return row['state']
 
 

@@ -8,7 +8,7 @@ This module maintains a hot Redis cache of those records and provides a
 synchronous lookup that adds <1ms to anomaly detection per BGP update.
 
 Cache key:  rpki:v2:{prefix}:{origin_asn}  →  "valid" | "invalid" | "not-found"
-TTL:        4 hours (RPKI state is slow-changing)
+TTL:        at most 20 minutes from the validated snapshot; versioned local-validator keys
 
 Falls back to "unknown" if Redis is unavailable or prefix not cached.
 The collector-rpki container populates this cache via write_rpki_cache().
@@ -18,7 +18,7 @@ import os
 import redis
 
 _r: redis.Redis | None = None
-RPKI_CACHE_TTL = 600  # 4 hours
+RPKI_CACHE_TTL = 600  # Legacy callers remain bounded to ten minutes
 
 
 def _get_redis() -> redis.Redis:
@@ -59,23 +59,5 @@ def write_rpki_cache(prefix: str, origin_asn: int, status: str):
 
 
 def warm_rpki_cache_from_db(pool_sync) -> int:
-    """
-    Warm Redis from TimescaleDB rpki_status table on startup.
-    Returns number of entries loaded.
-    """
-    try:
-        r    = _get_redis()
-        rows = pool_sync.execute(
-            "SELECT prefix, origin_asn, status FROM rpki_status "
-            "WHERE time > NOW() - INTERVAL '10 minutes'"
-        )
-        pipe = r.pipeline()
-        count = 0
-        for row in rows:
-            key = f"rpki:v2:{row[0]}:{row[1]}"
-            pipe.set(key, row[2], ex=RPKI_CACHE_TTL)
-            count += 1
-        pipe.execute()
-        return count
-    except Exception:
-        return 0
+    """Legacy public-endpoint cache warming is disabled; local snapshots populate v2 keys."""
+    return 0
