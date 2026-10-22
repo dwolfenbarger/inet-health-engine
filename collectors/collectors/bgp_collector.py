@@ -84,7 +84,7 @@ def _build_bgpstream(window_start: int, window_end: int) -> list[dict]:
         import bgpstream  # type: ignore
     except ImportError:
         log.warning("bgpstream_not_installed", msg="PyBGPStream not available, using stub")
-        return _bgpstream_stub(window_start, window_end)
+        raise RuntimeError("PyBGPStream is unavailable; synthetic fallback is disabled")
 
     stream = bgpstream.BGPStream(
         from_time=str(window_start),

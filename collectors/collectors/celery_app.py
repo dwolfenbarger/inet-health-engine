@@ -18,6 +18,7 @@ app = Celery(
     backend=settings.redis_url,
     include=[
         "collectors.tasks.bgp",
+        "collectors.tasks.hijack",
         "collectors.tasks.traffic",
         "collectors.tasks.community",
         "collectors.tasks.baseline",
@@ -53,11 +54,6 @@ app.conf.update(
             "options":  {"queue": "bgp"},
         },
         # Legacy stub/PyBGPStream cycle kept but infrequent
-        "bgp-collect": {
-            "task":     "collectors.tasks.bgp.run_bgp_cycle",
-            "schedule": 1800,
-            "options":  {"queue": "bgp"},
-        },
         "traffic-collect": {
             "task":     "collectors.tasks.traffic.run_traffic_cycle",
             "schedule": 300,

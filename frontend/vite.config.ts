@@ -7,7 +7,8 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   css: { postcss: {} },
   build: { rolldownOptions: { input: {
-    main: fileURLToPath(new URL('./index.html', import.meta.url)),
+    legacy: fileURLToPath(new URL('./legacy.html', import.meta.url)),
+        main: fileURLToPath(new URL('./index.html', import.meta.url)),
     design: fileURLToPath(new URL('./design.html', import.meta.url)),
   } } },
   server: {
