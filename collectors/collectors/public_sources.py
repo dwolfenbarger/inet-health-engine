@@ -20,7 +20,7 @@ def atlas_record(raw, metadata, now):
     if not now-timedelta(hours=1) <= observed <= now+timedelta(minutes=2):
         return None
     kind,af=metadata['type'],metadata['af']
-    if raw.get('type') != kind or raw.get('af') != af or not raw.get('prb_id'):
+    if raw.get('type',kind) != kind or raw.get('af',af) != af or not raw.get('prb_id'):
         raise ValueError('Atlas metadata/result mismatch')
     payload={'measurement_id':raw['msm_id'],'probe_id':raw['prb_id'],
         'kind':kind,'family':af,'source_address':raw.get('from'),
@@ -58,12 +58,20 @@ async def run_atlas_cycle():
                         raw=resp.json()
                         if not isinstance(raw,list):raise ValueError('Unexpected Atlas results')
                         now=datetime.now(timezone.utc)
-                        parsed=[r for d in raw if (r:=atlas_record(d,meta,now)) is not None]
+                        parsed=[];parse_errors=0
+                        for item in raw:
+                            try:
+                                record=atlas_record(item,meta,now)
+                                if record is not None:parsed.append(record)
+                            except (KeyError,TypeError,ValueError,OverflowError):
+                                parse_errors+=1
+                        if parse_errors:failures.append({'id':msm,'error':'MalformedProbeResults','count':parse_errors})
                         records.extend(parsed)
                         inventory.append({'id':msm,'kind':meta['type'],'family':meta['af'],
                             'target':meta.get('target_ip'),'interval_seconds':meta.get('interval'),
                             'fresh_probes':len({r['payload']['probe_id'] for r in parsed}),
-                            'stale_results_excluded':len(raw)-len(parsed)})
+                            'stale_results_excluded':len(raw)-len(parsed)-parse_errors,
+                            'malformed_results_excluded':parse_errors})
                     except Exception as exc:failures.append({'id':msm,'error':type(exc).__name__})
             if not inventory:raise RuntimeError('No Atlas measurement could be read')
             await save_cycle('atlas',records,{'scope':'Public built-in measurements to K-root; latest result per probe, last hour',

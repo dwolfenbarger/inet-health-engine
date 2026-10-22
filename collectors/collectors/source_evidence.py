@@ -19,7 +19,7 @@ async def save_cycle(source, records, detail, *, state='partial', error_code=Non
                   (excluded.observed_at=source_evidence.observed_at AND excluded.payload IS DISTINCT FROM source_evidence.payload)
             ''', [(source,r['id'],r['observed_at'],r.get('asn'),r.get('family'),r.get('resource'),
                    json.dumps(r['payload'],allow_nan=False)) for r in records])
-        success = now if error_code is None and state != 'unconfigured' else None
+        success = now if state not in ['error','unconfigured','unavailable'] else None
         await conn.execute('''
             INSERT INTO source_status(source,last_attempt,last_success,last_observation,state,records,detail,error_code)
             VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8)
