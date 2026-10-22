@@ -1,4 +1,4 @@
-﻿"""
+"""
 collectors/ripe_ris_collector.py — RIPE RIS Live streaming BGP collector.
 VENGEANCE: 5 collectors, 60s window, no memory cap, 25K batch inserts.
 """
@@ -296,7 +296,7 @@ async def run_collection_cycle(window_seconds: int):
         if _announces:
             pipe = _rr.pipeline()
             for u in _announces:
-                pipe.get(f"rpki:{u.prefix}:{u.origin_asn}")
+                pipe.get(f"rpki:v2:{u.prefix}:{u.origin_asn}")
             _results = await pipe.execute()
             hits = 0
             for u, status in zip(_announces, _results):

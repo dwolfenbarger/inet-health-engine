@@ -32,6 +32,8 @@ class Settings(BaseSettings):
     minio_secret_key: str = Field("changeme_minio", env="MINIO_SECRET_KEY")
     minio_bucket_mrt: str = "mrt-dumps"
 
+    routinator_url: str = "http://127.0.0.1:8323"
+
     # ── API keys ──────────────────────────────
     cloudflare_radar_token: str = Field("", env="CLOUDFLARE_RADAR_TOKEN")
     reddit_client_id: str = Field("", env="REDDIT_CLIENT_ID")

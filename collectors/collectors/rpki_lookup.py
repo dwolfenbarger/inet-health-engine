@@ -7,7 +7,7 @@ The RPKI collector writes validated prefix→ASN→status records to TimescaleDB
 This module maintains a hot Redis cache of those records and provides a
 synchronous lookup that adds <1ms to anomaly detection per BGP update.
 
-Cache key:  rpki:{prefix}:{origin_asn}  →  "valid" | "invalid" | "not-found"
+Cache key:  rpki:v2:{prefix}:{origin_asn}  →  "valid" | "invalid" | "not-found"
 TTL:        4 hours (RPKI state is slow-changing)
 
 Falls back to "unknown" if Redis is unavailable or prefix not cached.
@@ -18,7 +18,7 @@ import os
 import redis
 
 _r: redis.Redis | None = None
-RPKI_CACHE_TTL = 14400  # 4 hours
+RPKI_CACHE_TTL = 600  # 4 hours
 
 
 def _get_redis() -> redis.Redis:
@@ -38,7 +38,7 @@ def get_rpki_status_sync(prefix: str, origin_asn: int | None) -> str:
         return "unknown"
     try:
         r   = _get_redis()
-        key = f"rpki:{prefix}:{origin_asn}"
+        key = f"rpki:v2:{prefix}:{origin_asn}"
         val = r.get(key)
         return val if val else "unknown"
     except Exception:
@@ -52,7 +52,7 @@ def write_rpki_cache(prefix: str, origin_asn: int, status: str):
     """
     try:
         r   = _get_redis()
-        key = f"rpki:{prefix}:{origin_asn}"
+        key = f"rpki:v2:{prefix}:{origin_asn}"
         r.set(key, status, ex=RPKI_CACHE_TTL)
     except Exception:
         pass
@@ -67,12 +67,12 @@ def warm_rpki_cache_from_db(pool_sync) -> int:
         r    = _get_redis()
         rows = pool_sync.execute(
             "SELECT prefix, origin_asn, status FROM rpki_status "
-            "WHERE time > NOW() - INTERVAL '4 hours'"
+            "WHERE time > NOW() - INTERVAL '10 minutes'"
         )
         pipe = r.pipeline()
         count = 0
         for row in rows:
-            key = f"rpki:{row[0]}:{row[1]}"
+            key = f"rpki:v2:{row[0]}:{row[1]}"
             pipe.set(key, row[2], ex=RPKI_CACHE_TTL)
             count += 1
         pipe.execute()
