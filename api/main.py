@@ -17,6 +17,7 @@ from api.routes_events  import router as events_router
 from api.routes_traffic import router as traffic_router
 from api.routes_intelligence import router as intelligence_router
 from api.routes_globe import router as globe_router
+from api.routes_assessment import router as assessment_router
 from api.routes_events_lifecycle import router as lifecycle_router
 from api.ws             import websocket_endpoint, redis_stream_listener
 
@@ -62,6 +63,7 @@ app.include_router(events_router,  prefix="/api/v1")
 app.include_router(traffic_router,      prefix="/api/v1")
 app.include_router(intelligence_router, prefix="/api/v1")
 app.include_router(globe_router,        prefix="/api/v1")
+app.include_router(assessment_router, prefix="/api/v1")
 app.include_router(lifecycle_router,    prefix="/api/v1")
 
 

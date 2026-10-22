@@ -37,22 +37,22 @@ function EventCard({ e, isMS, onClick, onTrace }: { e: any; isMS: boolean; onCli
         <span style={{ color: ec, fontSize: 11, fontWeight: 700, flex: 1, letterSpacing:'.04em' }}>
           {e.event_type.replace(/_/g,' ').toUpperCase()}
         </span>
-        {isMS && <span style={{ color:'#00ee88', fontSize:9, fontWeight:700 }}>✓✓</span>}
+        {isMS && <span style={{ color:'#00ee88', fontSize:13, fontWeight:700 }}>✓✓</span>}
       </div>
-      <div style={{ color:'#fff', fontSize:10, fontWeight:600, marginBottom:3 }}>{name}</div>
+      <div style={{ color:'#fff', fontSize:12, fontWeight:600, marginBottom:3 }}>{name}</div>
       {e.affected_prefix && (
-        <div style={{ color:'#ffaaaa', fontSize:9, marginBottom:4, fontFamily:'monospace' }}>
+        <div style={{ color:'#ffaaaa', fontSize:13, marginBottom:4, fontFamily:'monospace' }}>
           {e.affected_prefix}
         </div>
       )}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
         <span style={{ color: sc, background:`${sc}25`, border:`1px solid ${sc}66`,
-          borderRadius:3, fontSize:8, padding:'2px 7px', fontWeight:700, letterSpacing:'.06em' }}>
+          borderRadius:3, fontSize:12, padding:'2px 7px', fontWeight:700, letterSpacing:'.06em' }}>
           {STATUS_LABEL[e.status] ?? e.status?.toUpperCase()}
         </span>
         <div style={{ display:'flex', gap:8, alignItems:'center' }}>
           <span style={{ color:'#ff8888', fontSize:8 }}>×{occurrences}</span>
-          <span style={{ color:severityColor(sev), fontSize:10, fontWeight:700 }}>S{sev}</span>
+          <span style={{ color:severityColor(sev), fontSize:12, fontWeight:700 }}>S{sev}</span>
           <span style={{ color:'#ff6666', fontSize:8 }}>{(conf*100).toFixed(0)}%</span>
         </div>
       </div>
@@ -60,7 +60,7 @@ function EventCard({ e, isMS, onClick, onTrace }: { e: any; isMS: boolean; onCli
         <button onClick={ev => { ev.stopPropagation(); onTrace() }} style={{
           marginTop:6, width:"100%", background:"#1a0828",
           border:"1px solid #aa44ff66", borderRadius:3,
-          color:"#cc88ff", fontSize:8, padding:"4px", cursor:"pointer",
+          color:"#cc88ff", fontSize:12, padding:"4px", cursor:"pointer",
           fontFamily:"monospace", letterSpacing:".08em",
         }}>TRACE PATH ON GLOBE</button>
       )}
@@ -77,18 +77,18 @@ function EventCard({ e, isMS, onClick, onTrace }: { e: any; isMS: boolean; onCli
     }}>
       <div style={{ display:'flex', alignItems:'center', gap:5, marginBottom:4 }}>
         <span style={{ fontSize:14, lineHeight:1 }}>{eventIcon(e.event_type)}</span>
-        <span style={{ color:ec, fontSize:10, fontWeight:700, flex:1 }}>
+        <span style={{ color:ec, fontSize:12, fontWeight:700, flex:1 }}>
           {e.event_type.replace(/_/g,' ').toUpperCase()}
         </span>
         {isMS && <span style={{ color:'#00ee88', fontSize:8 }}>✓✓</span>}
         <span style={{ color:sc, background:`${sc}20`, border:`1px solid ${sc}55`,
-          borderRadius:2, fontSize:8, padding:'1px 6px', fontWeight:600 }}>
+          borderRadius:2, fontSize:12, padding:'1px 6px', fontWeight:600 }}>
           {STATUS_LABEL[e.status] ?? e.status?.toUpperCase()}
         </span>
       </div>
-      <div style={{ color:'#ddeeff', fontSize:9, fontWeight:500, marginBottom:2 }}>{name}</div>
+      <div style={{ color:'#ddeeff', fontSize:13, fontWeight:500, marginBottom:2 }}>{name}</div>
       {e.affected_prefix && (
-        <div style={{ color:'#8fc4dc', fontSize:8, marginBottom:3, fontFamily:'monospace' }}>
+        <div style={{ color:'#8fc4dc', fontSize:12, marginBottom:3, fontFamily:'monospace' }}>
           {e.affected_prefix}
         </div>
       )}
@@ -97,7 +97,7 @@ function EventCard({ e, isMS, onClick, onTrace }: { e: any; isMS: boolean; onCli
           {e.duration_human ?? '—'} · ×{occurrences}
         </span>
         <div style={{ display:'flex', gap:6 }}>
-          <span style={{ color:severityColor(sev), fontSize:8, fontWeight:700 }}>S{sev}</span>
+          <span style={{ color:severityColor(sev), fontSize:12, fontWeight:700 }}>S{sev}</span>
           <span style={{ color:'#00ccee', fontSize:7 }}>{(conf*100).toFixed(0)}%</span>
         </div>
       </div>
@@ -105,7 +105,7 @@ function EventCard({ e, isMS, onClick, onTrace }: { e: any; isMS: boolean; onCli
         <button onClick={ev => { ev.stopPropagation(); onTrace() }} style={{
           marginTop:5, width:'100%', background:'#0d0a1a',
           border:'1px solid #aa44ff44', borderRadius:3,
-          color:'#aa66ff', fontSize:7, padding:'3px', cursor:'pointer',
+          color:'#aa66ff', fontSize:11, padding:'3px', cursor:'pointer',
           fontFamily:'monospace', letterSpacing:'.08em',
         }}>⟶ TRACE PATH</button>
       )}
@@ -122,10 +122,10 @@ function EventCard({ e, isMS, onClick, onTrace }: { e: any; isMS: boolean; onCli
     }}>
       <div style={{ display:'flex', alignItems:'center', gap:5, marginBottom:3 }}>
         <span style={{ fontSize:12 }}>{eventIcon(e.event_type)}</span>
-        <span style={{ color:ec, fontSize:9, flex:1 }}>
+        <span style={{ color:ec, fontSize:13, flex:1 }}>
           {e.event_type.replace(/_/g,' ').toUpperCase()}
         </span>
-        <span style={{ color:sc, fontSize:7, background:`${sc}18`,
+        <span style={{ color:sc, fontSize:11, background:`${sc}18`,
           border:`1px solid ${sc}44`, borderRadius:2, padding:'0 4px' }}>
           {(STATUS_LABEL[e.status] ?? e.status)?.slice(0,3)}
         </span>
@@ -151,8 +151,8 @@ function EventCard({ e, isMS, onClick, onTrace }: { e: any; isMS: boolean; onCli
       padding: '4px 6px 4px 8px', marginBottom: 3, cursor: 'pointer',
       borderRadius: '0 2px 2px 0',
     }}>
-      <span style={{ fontSize:10, opacity:.75 }}>{eventIcon(e.event_type)}</span>
-      <span style={{ color:'#6a9ab0', fontSize:8, flex:1 }}>
+      <span style={{ fontSize:12, opacity:.75 }}>{eventIcon(e.event_type)}</span>
+      <span style={{ color:'#6a9ab0', fontSize:12, flex:1 }}>
         {e.affected_prefix ?? name}
       </span>
       <span style={{ color:severityColor(sev), fontSize:7 }}>S{sev}</span>
@@ -219,17 +219,17 @@ export function EventRail() {
       {/* Header */}
       <div style={{ padding:'8px 10px', borderBottom:'1px solid #0d2035', flexShrink:0 }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:5 }}>
-          <span style={{ color:'#4a9fc8', fontSize:9, letterSpacing:'.12em', fontWeight:700 }}>
+          <span style={{ color:'#4a9fc8', fontSize:13, letterSpacing:'.12em', fontWeight:700 }}>
             LIVE EVENTS
           </span>
           {msCount > 0 && (
-            <span style={{ color:'#00ee88', fontSize:8, background:'#00ee8814',
+            <span style={{ color:'#00ee88', fontSize:12, background:'#00ee8814',
               border:'1px solid #00ee8833', borderRadius:3, padding:'1px 6px' }}>
               ✓✓ {msCount}
             </span>
           )}
           {communityHits > 0 && (
-            <span style={{ color:'#aa88ff', fontSize:8, background:'#aa88ff14',
+            <span style={{ color:'#aa88ff', fontSize:12, background:'#aa88ff14',
               border:'1px solid #aa88ff33', borderRadius:3, padding:'1px 6px' }}>
               ◎ {communityHits}
             </span>
@@ -258,7 +258,7 @@ export function EventRail() {
       {msCount > 0 && (
         <div style={{ background:'#00ee8808', borderBottom:'1px solid #00ee8820',
           padding:'5px 10px', flexShrink:0 }}>
-          <div style={{ color:'#00ee88', fontSize:8, marginBottom:3 }}>
+          <div style={{ color:'#00ee88', fontSize:12, marginBottom:3 }}>
             ✓✓ RIS + RADAR CONFIRMED
           </div>
           {(xref!.events as any[]).filter(e => e.multi_source).slice(0,2).map((e:any,i:number) => (
@@ -280,7 +280,7 @@ export function EventRail() {
         <div style={{ flexShrink:0, maxHeight:'45%', overflowY:'auto',
           borderBottom:'1px solid #1a0808', padding:'4px 8px',
           background:'#040810' }}>
-          <div style={{ color:'#6a2020', fontSize:7, letterSpacing:'.1em',
+          <div style={{ color:'#6a2020', fontSize:11, letterSpacing:'.1em',
             padding:'2px 0 4px', display:'flex', alignItems:'center', gap:4 }}>
             <div style={{ width:5, height:5, borderRadius:'50%',
               background:'#ff3b3b', boxShadow:'0 0 4px #ff3b3b' }} />
@@ -324,7 +324,7 @@ export function EventRail() {
             ))}
             {low.length > 0 && (
               <>
-                <div style={{ color:'#3a6070', fontSize:7, letterSpacing:'.1em',
+                <div style={{ color:'#3a6070', fontSize:11, letterSpacing:'.1em',
                   padding:'4px 0 3px', marginTop:2 }}>
                   LOW SEVERITY ({low.length})
                 </div>
@@ -348,7 +348,7 @@ export function EventRail() {
                   borderRadius:3, padding:'6px 8px', marginBottom:4, cursor:'pointer' }}>
                 <div style={{ display:'flex', gap:5, alignItems:'center', marginBottom:2 }}>
                   <span style={{ fontSize:12 }}>{eventIcon(a.event_type)}</span>
-                  <span style={{ color:ec, fontSize:9, flex:1 }}>
+                  <span style={{ color:ec, fontSize:13, flex:1 }}>
                     {a.event_type.replace(/_/g,' ').toUpperCase()}
                   </span>
                   <span style={{ color:'#6aa8c0', fontSize:7 }}>{ago}m</span>
@@ -373,7 +373,7 @@ export function EventRail() {
         {/* Community signal strip - shown when correlated posts exist */}
         {communityHits > 0 && (
           <div style={{ marginTop:8 }}>
-            <div style={{ color:'#6a5090', fontSize:7, letterSpacing:'.1em',
+            <div style={{ color:'#6a5090', fontSize:11, letterSpacing:'.1em',
               padding:'4px 0 3px', display:'flex', alignItems:'center', gap:5 }}>
               <span style={{ color:'#aa88ff' }}>◎</span>
               COMMUNITY SIGNALS ({communityHits})
@@ -393,22 +393,22 @@ export function EventRail() {
                     padding:'4px 6px', marginBottom:3, background:'#06080e',
                     border:'1px solid #1a0d2e', borderLeft:`2px solid ${srcColor}`,
                     borderRadius:'0 3px 3px 0' }}>
-                    <span style={{ color:srcColor, fontSize:8, fontWeight:700,
+                    <span style={{ color:srcColor, fontSize:12, fontWeight:700,
                       minWidth:16, textAlign:'center', marginTop:1 }}>{srcLabel}</span>
                     <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ color:'#9a7ab4', fontSize:8, lineHeight:1.3,
+                      <div style={{ color:'#9a7ab4', fontSize:12, lineHeight:1.3,
                         overflow:'hidden', display:'-webkit-box',
                         WebkitLineClamp:2, WebkitBoxOrient:'vertical' as const }}>
                         {(s.title ?? s.text ?? '').slice(0, 80)}
                       </div>
                       {s.matched_anomalies?.[0] && (
-                        <div style={{ color:'#554070', fontSize:7, marginTop:2 }}>
+                        <div style={{ color:'#554070', fontSize:11, marginTop:2 }}>
                           {s.matched_anomalies[0].event_type?.replace(/_/g,' ')}
                           {s.matched_anomalies[0].prefix ? ` · ${s.matched_anomalies[0].prefix}` : ''}
                         </div>
                       )}
                     </div>
-                    <span style={{ color:'#6a5090', fontSize:7, flexShrink:0 }}>
+                    <span style={{ color:'#6a5090', fontSize:11, flexShrink:0 }}>
                       {Math.round(s.urgency_score * 100)}%
                     </span>
                   </div>

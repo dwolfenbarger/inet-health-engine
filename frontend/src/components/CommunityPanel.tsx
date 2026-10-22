@@ -31,7 +31,7 @@ export function CommunityPanel() {
 
       {/* Header */}
       <div style={{ marginBottom:14 }}>
-        <div style={{ color:'#4a9fc8', fontSize:'8px', letterSpacing:'.12em', marginBottom:6 }}>
+        <div style={{ color:'#4a9fc8', fontSize:'12px', letterSpacing:'.12em', marginBottom:6 }}>
           COMMUNITY SIGNALS · NLP-CORRELATED TO BGP ANOMALIES
         </div>
         <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
@@ -43,7 +43,7 @@ export function CommunityPanel() {
             <div key={p.label} style={{ background:`${p.c}0e`, border:`1px solid ${p.c}33`,
               borderRadius:4, padding:'5px 12px', textAlign:'center' }}>
               <div style={{ color:p.c, fontSize:16, fontWeight:700 }}>{p.val}</div>
-              <div style={{ color:'#8fc4dc', fontSize:'7px' }}>{p.label}</div>
+              <div style={{ color:'#8fc4dc', fontSize:'11px' }}>{p.label}</div>
             </div>
           ))}
         </div>
@@ -56,7 +56,7 @@ export function CommunityPanel() {
       )}
 
       {error && (
-        <div style={{ color:'#ff3b3b', fontSize:'9px', padding:'10px 0' }}>
+        <div style={{ color:'#ff3b3b', fontSize:'13px', padding:'10px 0' }}>
           Error loading signals. Elasticsearch may be indexing.
         </div>
       )}
@@ -64,7 +64,7 @@ export function CommunityPanel() {
       {/* BGP-Correlated signals */}
       {matched.length > 0 && (
         <div style={{ marginBottom:16 }}>
-          <div style={{ color:'#00ee88', fontSize:'8px', letterSpacing:'.1em', marginBottom:8 }}>
+          <div style={{ color:'#00ee88', fontSize:'12px', letterSpacing:'.1em', marginBottom:8 }}>
             ● BGP-CORRELATED ({matched.length})
           </div>
           {matched.map((s: any, i: number) => (
@@ -77,7 +77,7 @@ export function CommunityPanel() {
       {/* Unmatched but high-urgency signals */}
       {unmatched.filter((s:any) => s.urgency_score >= 0.3).length > 0 && (
         <div>
-          <div style={{ color:'#8fc4dc', fontSize:'8px', letterSpacing:'.1em', marginBottom:8 }}>
+          <div style={{ color:'#8fc4dc', fontSize:'12px', letterSpacing:'.1em', marginBottom:8 }}>
             ○ HIGH URGENCY · NOT YET CORRELATED
           </div>
           {unmatched.filter((s:any) => s.urgency_score >= 0.3).slice(0,10).map((s:any,i:number) => (
@@ -88,9 +88,9 @@ export function CommunityPanel() {
       )}
 
       {signals.length === 0 && !isLoading && (
-        <div style={{ color:'#7ab8d4', textAlign:'center', padding:'30px 0', fontSize:'9px' }}>
+        <div style={{ color:'#7ab8d4', textAlign:'center', padding:'30px 0', fontSize:'13px' }}>
           No signals in last 48h.<br/>
-          <span style={{ color:'#6aa8c0', fontSize:'8px' }}>
+          <span style={{ color:'#6aa8c0', fontSize:'12px' }}>
             Reddit .json ✅ · HN Algolia ✅ · NANOG ⛔ · X ⛔
           </span>
         </div>
@@ -114,18 +114,18 @@ function SignalCard({ sig, setSelectedASN, sourceColor, sourceIcon, dim=false }:
       {/* Source + score */}
       <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:5 }}>
         <span style={{ color:sc, background:`${sc}22`, border:`1px solid ${sc}44`,
-          borderRadius:2, fontSize:'8px', padding:'1px 5px', fontWeight:700 }}>{icon}</span>
-        <span style={{ color:'#8fc4dc', fontSize:'8px' }}>{sig.source?.toUpperCase()}</span>
-        {hasMatch && <span style={{ color:'#00ee88', fontSize:'8px' }}>● BGP match</span>}
+          borderRadius:2, fontSize:'12px', padding:'1px 5px', fontWeight:700 }}>{icon}</span>
+        <span style={{ color:'#8fc4dc', fontSize:'12px' }}>{sig.source?.toUpperCase()}</span>
+        {hasMatch && <span style={{ color:'#00ee88', fontSize:'12px' }}>● BGP match</span>}
         <div style={{ flex:1 }} />
-        <span style={{ color:'#ffaa00', fontSize:'8px' }}>
+        <span style={{ color:'#ffaa00', fontSize:'12px' }}>
           urgency {(sig.urgency_score * 100).toFixed(0)}%
         </span>
       </div>
 
       {/* Title */}
       {sig.title && (
-        <div style={{ color:'#ddeeff', fontSize:'9px', marginBottom:5,
+        <div style={{ color:'#ddeeff', fontSize:'13px', marginBottom:5,
           overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
           {sig.title}
         </div>
@@ -138,13 +138,13 @@ function SignalCard({ sig, setSelectedASN, sourceColor, sourceIcon, dim=false }:
             <span key={asn}
               onClick={() => setSelectedASN(asn)}
               style={{ color:'#00ccee', background:'#00ccee14', border:'1px solid #00ccee33',
-                borderRadius:2, fontSize:'7px', padding:'1px 4px', cursor:'pointer' }}>
+                borderRadius:2, fontSize:'11px', padding:'1px 4px', cursor:'pointer' }}>
               AS{asn}
             </span>
           ))}
           {sig.extracted_prefixes?.slice(0,3).map((p: string) => (
             <span key={p} style={{ color:'#aa44ff', background:'#aa44ff14',
-              border:'1px solid #aa44ff33', borderRadius:2, fontSize:'7px', padding:'1px 4px' }}>
+              border:'1px solid #aa44ff33', borderRadius:2, fontSize:'11px', padding:'1px 4px' }}>
               {p}
             </span>
           ))}
@@ -154,11 +154,11 @@ function SignalCard({ sig, setSelectedASN, sourceColor, sourceIcon, dim=false }:
       {/* Matched anomalies */}
       {sig.matched_anomalies?.length > 0 && (
         <div style={{ borderTop:'1px solid #0d2035', marginTop:5, paddingTop:4 }}>
-          <div style={{ color:'#6aa8c0', fontSize:'7px', marginBottom:3 }}>
+          <div style={{ color:'#6aa8c0', fontSize:'11px', marginBottom:3 }}>
             MATCHED BGP ANOMALIES:
           </div>
           {sig.matched_anomalies.slice(0,2).map((a: any, j: number) => (
-            <div key={j} style={{ color:'#8fc4dc', fontSize:'7px', marginBottom:2 }}>
+            <div key={j} style={{ color:'#8fc4dc', fontSize:'11px', marginBottom:2 }}>
               {a.event_type} · {a.affected_prefix} · AS{a.origin_asn} · conf {(a.confidence*100).toFixed(0)}%
             </div>
           ))}
@@ -168,7 +168,7 @@ function SignalCard({ sig, setSelectedASN, sourceColor, sourceIcon, dim=false }:
       {sig.url && (
         <div style={{ marginTop:4 }}>
           <a href={sig.url} target="_blank" rel="noreferrer"
-            style={{ color:'#6aa8c0', fontSize:'7px', textDecoration:'none' }}>
+            style={{ color:'#6aa8c0', fontSize:'11px', textDecoration:'none' }}>
             ↗ {sig.url.length > 50 ? sig.url.slice(0,50)+'…' : sig.url}
           </a>
         </div>

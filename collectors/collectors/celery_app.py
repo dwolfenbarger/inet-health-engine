@@ -36,9 +36,21 @@ app.conf.update(
 
     beat_schedule={
         # ── Phase 1 ──────────────────────────────────
+        # Live RIPE RIS stream (replaces stub BGP cycle)
+        "hijack-scan": {
+            "task":     "collectors.tasks.hijack.run_hijack_scan",
+            "schedule": 300,
+            "options":  {"queue": "bgp"},
+        },
+        "ris-collect": {
+            "task":     "collectors.tasks.ris.run_ris_cycle",
+            "schedule": 90,    # every 90s — live stream window
+            "options":  {"queue": "bgp"},
+        },
+        # Legacy stub/PyBGPStream cycle kept but infrequent
         "bgp-collect": {
             "task":     "collectors.tasks.bgp.run_bgp_cycle",
-            "schedule": 300,
+            "schedule": 1800,
             "options":  {"queue": "bgp"},
         },
         "traffic-collect": {

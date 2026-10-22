@@ -11,8 +11,8 @@ function StatRow({ label, value, color='#ddeeff' }:
   { label:string; value:string|number; color?:string }) {
   return (
     <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
-      <span style={{ color:'#7ab8d4', fontSize:'9px' }}>{label}</span>
-      <span style={{ color, fontSize:'9px' }}>{String(value)}</span>
+      <span style={{ color:'#7ab8d4', fontSize:'13px' }}>{label}</span>
+      <span style={{ color, fontSize:'13px' }}>{String(value)}</span>
     </div>
   )
 }
@@ -141,22 +141,22 @@ export function ASSidebar() {
       {tab === 'info' && selectedASN && (
         <>
           <div style={{ marginBottom:10 }}>
-            <div style={{ color:'#4a9fc8', fontSize:'8px', letterSpacing:'.1em', marginBottom:5 }}>IDENTITY</div>
+            <div style={{ color:'#4a9fc8', fontSize:'12px', letterSpacing:'.1em', marginBottom:5 }}>IDENTITY</div>
             <StatRow label="ASN"     value={`AS${selectedASN}`} />
             <StatRow label="Name"    value={displayName} />
             <StatRow label="Country" value={displayCountry} />
             {staticMeta && <StatRow label="Tier" value={staticMeta.tier} />}
-            {loading && <div style={{ color:'#6aa8c0', fontSize:'8px', marginTop:4 }}>Loading…</div>}
+            {loading && <div style={{ color:'#6aa8c0', fontSize:'12px', marginTop:4 }}>Loading…</div>}
           </div>
           {sparkVals.length > 1 && (
             <div style={{ marginBottom:10 }}>
-              <div style={{ color:'#4a9fc8', fontSize:'8px', letterSpacing:'.1em', marginBottom:4 }}>
+              <div style={{ color:'#4a9fc8', fontSize:'12px', letterSpacing:'.1em', marginBottom:4 }}>
                 UPDATES / HOUR (12h)
               </div>
               <MiniSparkline values={sparkVals} color={dotColor} />
               <div style={{ display:'flex', justifyContent:'space-between', marginTop:2 }}>
-                <span style={{ color:'#6aa8c0', fontSize:'7px' }}>12h ago</span>
-                <span style={{ color:'#00ccee', fontSize:'7px' }}>
+                <span style={{ color:'#6aa8c0', fontSize:'11px' }}>12h ago</span>
+                <span style={{ color:'#00ccee', fontSize:'11px' }}>
                   {sparkVals[sparkVals.length-1]?.toLocaleString()} now
                 </span>
               </div>
@@ -165,7 +165,7 @@ export function ASSidebar() {
 
           {myAnomalies.length > 0 && (
             <div style={{ marginBottom:10 }}>
-              <div style={{ color:'#4a9fc8', fontSize:'8px', letterSpacing:'.1em', marginBottom:5 }}>
+              <div style={{ color:'#4a9fc8', fontSize:'12px', letterSpacing:'.1em', marginBottom:5 }}>
                 ACTIVE ANOMALIES ({myAnomalies.length})
               </div>
               {myAnomalies.slice(0, 5).map(a => (
@@ -174,15 +174,15 @@ export function ASSidebar() {
                   borderLeft:`2px solid ${eventColor(a.event_type)}`,
                   borderRadius:3, padding:'5px 7px', marginBottom:4 }}>
                   <div style={{ display:'flex', justifyContent:'space-between', marginBottom:2 }}>
-                    <span style={{ color:eventColor(a.event_type), fontSize:'8px' }}>
+                    <span style={{ color:eventColor(a.event_type), fontSize:'12px' }}>
                       {eventIcon(a.event_type)} {a.event_type.replace(/_/g,' ').toUpperCase()}
                     </span>
-                    <span style={{ color:severityColor(a.severity), fontSize:'7px' }}>
+                    <span style={{ color:severityColor(a.severity), fontSize:'11px' }}>
                       {severityLabel(a.severity)}
                     </span>
                   </div>
-                  {a.affected_prefix && <div style={{ color:'#ddeeff', fontSize:'8px' }}>{a.affected_prefix}</div>}
-                  <div style={{ color:'#7ab8d4', fontSize:'7px', marginTop:2 }}>
+                  {a.affected_prefix && <div style={{ color:'#ddeeff', fontSize:'12px' }}>{a.affected_prefix}</div>}
+                  <div style={{ color:'#7ab8d4', fontSize:'11px', marginTop:2 }}>
                     conf {(a.confidence*100).toFixed(0)}%
                   </div>
                 </div>
@@ -191,15 +191,15 @@ export function ASSidebar() {
           )}
           {profile?.top_prefixes?.length > 0 && (
             <div style={{ marginBottom:10 }}>
-              <div style={{ color:'#4a9fc8', fontSize:'8px', letterSpacing:'.1em', marginBottom:5 }}>
+              <div style={{ color:'#4a9fc8', fontSize:'12px', letterSpacing:'.1em', marginBottom:5 }}>
                 TOP PREFIXES (24h)
               </div>
 
               {profile.top_prefixes.slice(0, 8).map((p: any) => (
                 <div key={p.prefix} style={{ marginBottom:5 }}>
                   <div style={{ display:'flex', justifyContent:'space-between', marginBottom:1 }}>
-                    <span style={{ color:'#ddeeff', fontSize:'8px' }}>{p.prefix}</span>
-                    <span style={{ color:'#7ab8d4', fontSize:'7px' }}>{p.changes.toLocaleString()}</span>
+                    <span style={{ color:'#ddeeff', fontSize:'12px' }}>{p.prefix}</span>
+                    <span style={{ color:'#7ab8d4', fontSize:'11px' }}>{p.changes.toLocaleString()}</span>
                   </div>
                   <MiniBar value={p.changes} max={profile.top_prefixes[0].changes} color={dotColor} />
                 </div>
@@ -207,14 +207,14 @@ export function ASSidebar() {
             </div>
           )}
           {!loading && !profile && myAnomalies.length === 0 && (
-            <div style={{ color:'#6aa8c0', textAlign:'center', padding:'20px 0', fontSize:'9px' }}>
+            <div style={{ color:'#6aa8c0', textAlign:'center', padding:'20px 0', fontSize:'13px' }}>
               No data in last 24h for AS{selectedASN}
             </div>
           )}
           <button onClick={() => { setPathSrc(selectedASN); setTab('path') }}
             style={{ width:'100%', marginTop:8, background:'#0a0820',
               border:'1px solid #aa44ff44', borderRadius:4, color:'#aa44ff',
-              padding:'6px', cursor:'pointer', fontSize:'8px', fontFamily:'inherit' }}>
+              padding:'6px', cursor:'pointer', fontSize:'12px', fontFamily:'inherit' }}>
             TRACE PATH FROM AS{selectedASN} →
           </button>
         </>
@@ -222,27 +222,27 @@ export function ASSidebar() {
 
       {tab === 'path' && (
         <div>
-          <div style={{ color:'#4a9fc8', fontSize:'8px', letterSpacing:'.1em', marginBottom:8 }}>AS PATH ANALYSIS</div>
+          <div style={{ color:'#4a9fc8', fontSize:'12px', letterSpacing:'.1em', marginBottom:8 }}>AS PATH ANALYSIS</div>
           {selectedAnomaly?.event_type === 'bgp_hijack' && (
             <div style={{ background:'#1a0a05', border:'1px solid #ffdd0044',
               borderRadius:4, padding:'7px 9px', marginBottom:10 }}>
-              <div style={{ color:'#ffdd00', fontSize:'8px', fontWeight:700, marginBottom:4 }}>
+              <div style={{ color:'#ffdd00', fontSize:'12px', fontWeight:700, marginBottom:4 }}>
                 HIJACK CONTEXT
               </div>
-              <div style={{ color:'#ccaa44', fontSize:'8px', marginBottom:2 }}>
+              <div style={{ color:'#ccaa44', fontSize:'12px', marginBottom:2 }}>
                 Attacker: AS{selectedAnomaly.origin_asn}
               </div>
               {selectedAnomaly.expected_asn && (
-                <div style={{ color:'#8fc4dc', fontSize:'8px', marginBottom:2 }}>
+                <div style={{ color:'#8fc4dc', fontSize:'12px', marginBottom:2 }}>
                   Victim: AS{selectedAnomaly.expected_asn}
                 </div>
               )}
               {selectedAnomaly.affected_prefix && (
-                <div style={{ color:'#7ab8d4', fontSize:'8px', fontFamily:'monospace' }}>
+                <div style={{ color:'#7ab8d4', fontSize:'12px', fontFamily:'monospace' }}>
                   Prefix: {selectedAnomaly.affected_prefix}
                 </div>
               )}
-              <div style={{ color:'#887755', fontSize:'7px', marginTop:3 }}>
+              <div style={{ color:'#887755', fontSize:'11px', marginTop:3 }}>
                 conf {(selectedAnomaly.confidence*100).toFixed(0)}% · S{selectedAnomaly.severity}
               </div>
             </div>
@@ -250,7 +250,7 @@ export function ASSidebar() {
           <div style={{ background:'#060e18', border:'1px solid #0d1e30',
             borderRadius:4, padding:'8px 9px', marginBottom:10 }}>
 
-            <div style={{ color:'#4a9fc8', fontSize:'8px', letterSpacing:'.1em', marginBottom:6 }}>
+            <div style={{ color:'#4a9fc8', fontSize:'12px', letterSpacing:'.1em', marginBottom:6 }}>
               IP TRACEROUTE
             </div>
             {[
@@ -259,10 +259,10 @@ export function ASSidebar() {
               { label:'DST IP', val:traceDstIP, set:setTraceDstIP, hint:'e.g. 8.8.8.8' },
             ].map(({ label, val, set, hint }) => (
               <div key={label} style={{ marginBottom:5 }}>
-                <div style={{ color:'#6aa8c0', fontSize:'7px', marginBottom:2 }}>{label}</div>
+                <div style={{ color:'#6aa8c0', fontSize:'11px', marginBottom:2 }}>{label}</div>
                 <input value={val} onChange={e => set(e.target.value)} placeholder={hint}
                   style={{ width:'100%', background:'#040d18', border:'1px solid #0d2035',
-                    borderRadius:3, color:'#ddeeff', padding:'4px 6px', fontSize:'9px',
+                    borderRadius:3, color:'#ddeeff', padding:'4px 6px', fontSize:'13px',
                     fontFamily:'monospace', outline:'none', boxSizing:'border-box' as const }} />
               </div>
             ))}
@@ -281,33 +281,33 @@ export function ASSidebar() {
                 border:`1px solid ${traceSrcIP && traceDstIP ? '#aa44ff66' : '#0d2035'}`,
                 borderRadius:3, color: traceSrcIP && traceDstIP ? '#aa66ff' : '#4a6070',
                 padding:'5px', cursor: traceSrcIP && traceDstIP ? 'pointer' : 'default',
-                fontSize:'8px', fontFamily:'monospace', letterSpacing:'.08em' }}>
+                fontSize:'12px', fontFamily:'monospace', letterSpacing:'.08em' }}>
               {traceLoading ? 'TRACING...' : 'RUN TRACEROUTE'}
             </button>
           </div>
 
           {traceResult?.hops && (
             <div style={{ marginBottom:10 }}>
-              <div style={{ color:'#4a9fc8', fontSize:'8px', letterSpacing:'.1em', marginBottom:5 }}>
+              <div style={{ color:'#4a9fc8', fontSize:'12px', letterSpacing:'.1em', marginBottom:5 }}>
                 HOPS ({traceResult.hops.length})
               </div>
               {traceResult.hops.map((h: any, i: number) => (
                 <div key={i} style={{ display:'flex', alignItems:'center', gap:6,
                   padding:'4px 6px', marginBottom:3, background:'#06101c',
                   border:'1px solid #0a1828', borderRadius:3 }}>
-                  <span style={{ color:'#4a7090', fontSize:'7px', minWidth:14 }}>{i+1}</span>
-                  <span style={{ color:'#ddeeff', fontSize:'8px', fontFamily:'monospace', flex:1 }}>
+                  <span style={{ color:'#4a7090', fontSize:'11px', minWidth:14 }}>{i+1}</span>
+                  <span style={{ color:'#ddeeff', fontSize:'12px', fontFamily:'monospace', flex:1 }}>
                     {h.ip ?? '*'}
                   </span>
-                  {h.asn && <span style={{ color:'#00ccee', fontSize:'7px' }}>AS{h.asn}</span>}
+                  {h.asn && <span style={{ color:'#00ccee', fontSize:'11px' }}>AS{h.asn}</span>}
                   {h.org && (
-                    <span style={{ color:'#6aa8c0', fontSize:'7px',
+                    <span style={{ color:'#6aa8c0', fontSize:'11px',
                       maxWidth:60, overflow:'hidden', textOverflow:'ellipsis',
                       whiteSpace:'nowrap' as const }}>
                       {h.org.slice(0,12)}
                     </span>
                   )}
-                  {h.rtt_ms && <span style={{ color:'#7ab8d4', fontSize:'7px' }}>{h.rtt_ms}ms</span>}
+                  {h.rtt_ms && <span style={{ color:'#7ab8d4', fontSize:'11px' }}>{h.rtt_ms}ms</span>}
                 </div>
               ))}
             </div>
@@ -316,14 +316,14 @@ export function ASSidebar() {
             const asn = k === 'src' ? pathSrcASN : pathDstASN
             return (
               <div key={k} style={{ marginBottom:6 }}>
-                <div style={{ color:'#6aa8c0', fontSize:'7px', marginBottom:2 }}>
+                <div style={{ color:'#6aa8c0', fontSize:'11px', marginBottom:2 }}>
                   {k === 'src' ? 'SOURCE' : 'DESTINATION'}
                 </div>
 
                 <div style={{ display:'flex', gap:4 }}>
                   <div style={{ flex:1, background:'#06111e', border:'1px solid #0d2035',
                     borderRadius:3, padding:'4px 6px',
-                    color: asn ? '#aa44ff' : '#6aa8c0', fontSize:'8px' }}>
+                    color: asn ? '#aa44ff' : '#6aa8c0', fontSize:'12px' }}>
                     {asn ? `AS${asn}` : 'Click AS on globe'}
                   </div>
                   {asn && (
@@ -352,7 +352,7 @@ export function ASSidebar() {
                   <div key={label} style={{ flex:1, background:'#06111e',
                     border:'1px solid #0d2035', borderRadius:3, padding:'5px', textAlign:'center' }}>
                     <div style={{ color:c, fontSize:13, fontWeight:700 }}>{val ?? '—'}</div>
-                    <div style={{ color:'#6aa8c0', fontSize:'7px' }}>{label}</div>
+                    <div style={{ color:'#6aa8c0', fontSize:'11px' }}>{label}</div>
                   </div>
                 ))}
               </div>
@@ -363,10 +363,10 @@ export function ASSidebar() {
                   <div key={i} style={{ background:'#06111e', border:`1px solid ${col}22`,
                     borderLeft:`2px solid ${col}`, borderRadius:3, padding:'6px 8px', marginBottom:5 }}>
                     <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
-                      <span style={{ color:col, fontSize:'7px' }}>
+                      <span style={{ color:col, fontSize:'11px' }}>
                         {p.path_type === 'graph' ? 'GRAPH' : 'OBSERVED'}
                       </span>
-                      <span style={{ color:'#7ab8d4', fontSize:'7px' }}>{p.hops} hops</span>
+                      <span style={{ color:'#7ab8d4', fontSize:'11px' }}>{p.hops} hops</span>
                     </div>
                     <div style={{ display:'flex', alignItems:'center', flexWrap:'wrap', gap:2 }}>
                       {p.asns?.map((asn: number, j: number) => {
@@ -376,10 +376,10 @@ export function ASSidebar() {
                             <span style={{ color: m?.color ?? '#ddeeff',
                               background: m ? `${m.color}15` : '#0a1828',
                               border:`1px solid ${m?.color ?? '#8fc4dc'}44`,
-                              borderRadius:2, padding:'1px 4px', fontSize:'7px' }}>
+                              borderRadius:2, padding:'1px 4px', fontSize:'11px' }}>
                               {m ? m.short : `AS${asn}`}
                             </span>
-                            {j < p.asns.length - 1 && <span style={{ color:'#8fc4dc', fontSize:'8px' }}>›</span>}
+                            {j < p.asns.length - 1 && <span style={{ color:'#8fc4dc', fontSize:'12px' }}>›</span>}
                           </span>
                         )
                       })}
@@ -394,10 +394,10 @@ export function ASSidebar() {
 
       {tab === 'flaps' && selectedASN && (
         <div>
-          <div style={{ color:'#ff3b3b', fontSize:'8px', letterSpacing:'.1em', marginBottom:8 }}>
+          <div style={{ color:'#ff3b3b', fontSize:'12px', letterSpacing:'.1em', marginBottom:8 }}>
             BGP FLAP DETAIL
           </div>
-          {flapLoading && <div style={{ color:'#7ab8d4', fontSize:'9px' }}>Loading...</div>}
+          {flapLoading && <div style={{ color:'#7ab8d4', fontSize:'13px' }}>Loading...</div>}
           {flapData && !flapLoading && (
             <>
               <StatRow label="Window"       value="15 min" />
@@ -405,17 +405,17 @@ export function ASSidebar() {
               <StatRow label="Prefixes"     value={flapData.prefixes?.length ?? 0} />
               {flapData.timeline?.length > 1 && (
                 <div style={{ marginTop:8, marginBottom:8 }}>
-                  <div style={{ color:'#7ab8d4', fontSize:'8px', marginBottom:3 }}>FLAP RATE / MINUTE</div>
+                  <div style={{ color:'#7ab8d4', fontSize:'12px', marginBottom:3 }}>FLAP RATE / MINUTE</div>
                   <MiniSparkline values={flapData.timeline.map((b: any) => b.count)} color="#ff3b3b" />
                 </div>
               )}
-              <div style={{ color:'#4a9fc8', fontSize:'8px', letterSpacing:'.1em', marginTop:10, marginBottom:5 }}>
+              <div style={{ color:'#4a9fc8', fontSize:'12px', letterSpacing:'.1em', marginTop:10, marginBottom:5 }}>
                 UNSTABLE PREFIXES
               </div>
               {(flapData.prefixes ?? []).map((p: any) => (
                 <div key={p.prefix} style={{ background:'#060e1a', border:'1px solid #1a0808',
                   borderRadius:3, padding:'5px 7px', marginBottom:5 }}>
-                  <div style={{ color:'#ff6060', fontSize:'9px', fontWeight:700, marginBottom:3 }}>
+                  <div style={{ color:'#ff6060', fontSize:'13px', fontWeight:700, marginBottom:3 }}>
                     {p.prefix}
                   </div>
                   <StatRow label="Flaps (15m)"  value={p.flap_count}    color="#ff3b3b" />
@@ -488,7 +488,7 @@ export function ASSidebar() {
               <div style={{ color:dotColor, fontSize:14, fontWeight:700 }}>
                 AS{selectedASN ?? pathSrcASN}
               </div>
-              <div style={{ color:'#8fc4dc', fontSize:10, overflow:'hidden',
+              <div style={{ color:'#8fc4dc', fontSize:12, overflow:'hidden',
                 textOverflow:'ellipsis', whiteSpace:'nowrap' as const }}>
                 {displayName}{displayCountry !== '?' ? ` · ${displayCountry}` : ''}
               </div>
@@ -510,7 +510,7 @@ export function ASSidebar() {
     <div style={{ width:265, height:'100%',
       background:'#05101ef0', borderLeft:'1px solid #0d2035',
       backdropFilter:'blur(8px)', display:'flex', flexDirection:'column',
-      fontFamily:'monospace', fontSize:'9px',
+      fontFamily:'monospace', fontSize:'13px',
       boxShadow:'-4px 0 20px rgba(0,0,0,0.6)' }}>
       <div style={{ padding:'10px 12px', borderBottom:'1px solid #0d2035',
         display:'flex', alignItems:'center', gap:8 }}>
@@ -520,7 +520,7 @@ export function ASSidebar() {
           <div style={{ color:dotColor, fontSize:11, fontWeight:700 }}>
             AS{selectedASN ?? pathSrcASN}
           </div>
-          <div style={{ color:'#8fc4dc', fontSize:'8px', overflow:'hidden',
+          <div style={{ color:'#8fc4dc', fontSize:'12px', overflow:'hidden',
             textOverflow:'ellipsis', whiteSpace:'nowrap' as const }}>
             {displayName}{displayCountry !== '?' ? ` · ${displayCountry}` : ''}
           </div>

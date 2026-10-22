@@ -33,27 +33,27 @@ function FeedCard({ e, isMS, onSelect, onTrace }:
         <span style={{ color:ec, fontSize:13, fontWeight:700, flex:1, letterSpacing:'.04em' }}>
           {e.event_type.replace(/_/g,' ').toUpperCase()}
         </span>
-        {isMS && <span style={{ color:'#00ee88', fontSize:9, background:'#00ee8818',
+        {isMS && <span style={{ color:'#00ee88', fontSize:13, background:'#00ee8818',
           border:'1px solid #00ee8833', borderRadius:3, padding:'1px 6px' }}>✓✓ CONFIRMED</span>}
         <span style={{ color:sc, background:`${sc}22`, border:`1px solid ${sc}66`,
-          borderRadius:3, fontSize:9, padding:'2px 8px', fontWeight:700 }}>
+          borderRadius:3, fontSize:13, padding:'2px 8px', fontWeight:700 }}>
           {e.status?.toUpperCase()}
         </span>
       </div>
       <div style={{ display:'flex', gap:20, marginBottom:6, flexWrap:'wrap' as const }}>
         <div>
-          <div style={{ color:'#887755', fontSize:8, marginBottom:1 }}>OPERATOR</div>
+          <div style={{ color:'#887755', fontSize:12, marginBottom:1 }}>OPERATOR</div>
           <div style={{ color:'#fff', fontSize:11, fontWeight:600 }}>{name}</div>
         </div>
         {e.affected_prefix && (
           <div>
-            <div style={{ color:'#887755', fontSize:8, marginBottom:1 }}>PREFIX</div>
+            <div style={{ color:'#887755', fontSize:12, marginBottom:1 }}>PREFIX</div>
             <div style={{ color:'#ffaaaa', fontSize:11, fontFamily:'monospace' }}>{e.affected_prefix}</div>
           </div>
         )}
         {e.expected_asn && (
           <div>
-            <div style={{ color:'#887755', fontSize:8, marginBottom:1 }}>EXPECTED ORIGIN</div>
+            <div style={{ color:'#887755', fontSize:12, marginBottom:1 }}>EXPECTED ORIGIN</div>
             <div style={{ color:'#8fc4dc', fontSize:11 }}>AS{e.expected_asn}</div>
           </div>
         )}
@@ -70,7 +70,7 @@ function FeedCard({ e, isMS, onSelect, onTrace }:
         <button onClick={ev => { ev.stopPropagation(); onTrace() }} style={{
           marginTop:10, width:'100%', background:'#1a0828',
           border:'1px solid #aa44ff66', borderRadius:3,
-          color:'#cc88ff', fontSize:9, padding:'5px', cursor:'pointer',
+          color:'#cc88ff', fontSize:13, padding:'5px', cursor:'pointer',
           fontFamily:'monospace', letterSpacing:'.08em',
         }}>⟶ TRACE PATH ON GLOBE</button>
       )}
@@ -91,19 +91,19 @@ function FeedCard({ e, isMS, onSelect, onTrace }:
         </span>
         {isMS && <span style={{ color:'#00ee88', fontSize:8 }}>✓✓</span>}
         <span style={{ color:sc, background:`${sc}18`, border:`1px solid ${sc}55`,
-          borderRadius:3, fontSize:8, padding:'2px 7px', fontWeight:600 }}>
+          borderRadius:3, fontSize:12, padding:'2px 7px', fontWeight:600 }}>
           {e.status?.toUpperCase()}
         </span>
       </div>
       <div style={{ display:'flex', gap:16, marginBottom:5, flexWrap:'wrap' as const }}>
         <div style={{ flex:1 }}>
-          <div style={{ color:'#665533', fontSize:8, marginBottom:1 }}>OPERATOR</div>
-          <div style={{ color:'#ddeeff', fontSize:10, fontWeight:500 }}>{name}</div>
+          <div style={{ color:'#665533', fontSize:12, marginBottom:1 }}>OPERATOR</div>
+          <div style={{ color:'#ddeeff', fontSize:12, fontWeight:500 }}>{name}</div>
         </div>
         {e.affected_prefix && (
           <div>
-            <div style={{ color:'#665533', fontSize:8, marginBottom:1 }}>PREFIX</div>
-            <div style={{ color:'#8fc4dc', fontSize:10, fontFamily:'monospace' }}>{e.affected_prefix}</div>
+            <div style={{ color:'#665533', fontSize:12, marginBottom:1 }}>PREFIX</div>
+            <div style={{ color:'#8fc4dc', fontSize:12, fontFamily:'monospace' }}>{e.affected_prefix}</div>
           </div>
         )}
       </div>
@@ -111,14 +111,14 @@ function FeedCard({ e, isMS, onSelect, onTrace }:
         <span style={{ color:'#6a7040', fontSize:8 }}>⏱ {e.duration_human}</span>
         <span style={{ color:'#6a7040', fontSize:8 }}>×{e.occurrence_count}</span>
         <div style={{ flex:1 }} />
-        <span style={{ color:severityColor(sev), fontSize:10, fontWeight:700 }}>S{sev}</span>
+        <span style={{ color:severityColor(sev), fontSize:12, fontWeight:700 }}>S{sev}</span>
         <span style={{ color:'#00ccee', fontSize:8 }}>{(conf*100).toFixed(0)}%</span>
       </div>
       {onTrace && (
         <button onClick={ev => { ev.stopPropagation(); onTrace() }} style={{
           marginTop:8, width:'100%', background:'#0d0a1a',
           border:'1px solid #aa44ff44', borderRadius:3,
-          color:'#aa66ff', fontSize:8, padding:'4px', cursor:'pointer',
+          color:'#aa66ff', fontSize:12, padding:'4px', cursor:'pointer',
           fontFamily:'monospace', letterSpacing:'.08em',
         }}>⟶ TRACE PATH</button>
       )}
@@ -134,21 +134,21 @@ function FeedCard({ e, isMS, onSelect, onTrace }:
     }}>
       <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:5 }}>
         <span style={{ fontSize:13 }}>{eventIcon(e.event_type)}</span>
-        <span style={{ color:ec, fontSize:10, flex:1 }}>
+        <span style={{ color:ec, fontSize:12, flex:1 }}>
           {e.event_type.replace(/_/g,' ').toUpperCase()}
         </span>
         {isMS && <span style={{ color:'#00ee88', fontSize:8 }}>✓✓</span>}
-        <span style={{ color:sc, fontSize:8, background:`${sc}18`,
+        <span style={{ color:sc, fontSize:12, background:`${sc}18`,
           border:`1px solid ${sc}44`, borderRadius:2, padding:'1px 5px' }}>
           {e.status?.slice(0,3).toUpperCase()}
         </span>
       </div>
       <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
         <span style={{ color:'#aaccdd', fontSize:9 }}>{name}</span>
-        <span style={{ color:severityColor(sev), fontSize:9, fontWeight:700 }}>S{sev}</span>
+        <span style={{ color:severityColor(sev), fontSize:13, fontWeight:700 }}>S{sev}</span>
       </div>
       {e.affected_prefix && (
-        <div style={{ color:'#6a9ab0', fontSize:9, fontFamily:'monospace', marginBottom:3 }}>
+        <div style={{ color:'#6a9ab0', fontSize:13, fontFamily:'monospace', marginBottom:3 }}>
           {e.affected_prefix}
         </div>
       )}
@@ -169,7 +169,7 @@ function FeedCard({ e, isMS, onSelect, onTrace }:
       marginBottom:3, cursor:'pointer', borderRadius:'0 3px 3px 0',
     }}>
       <span style={{ fontSize:11, opacity:.7 }}>{eventIcon(e.event_type)}</span>
-      <span style={{ color:'#6a9ab0', fontSize:9, flex:1 }}>
+      <span style={{ color:'#6a9ab0', fontSize:13, flex:1 }}>
         {e.affected_prefix ?? name}
       </span>
       <span style={{ color:'#4a7080', fontSize:8 }}>{e.duration_human}</span>
@@ -193,10 +193,10 @@ function SectionHeader({ label, count, color, collapsed, onToggle, oldest }:
         background: count > 0 ? color : `${color}44`,
         boxShadow: count > 0 ? `0 0 6px ${color}` : 'none' }} />
       <span style={{ color: count > 0 ? color : `${color}66`,
-        fontSize:9, fontWeight:700, letterSpacing:'.12em', flex:1 }}>
+        fontSize:13, fontWeight:700, letterSpacing:'.12em', flex:1 }}>
         {label}
       </span>
-      <span style={{ color:`${color}88`, fontSize:9,
+      <span style={{ color:`${color}88`, fontSize:13,
         background:`${color}12`, border:`1px solid ${color}33`,
         borderRadius:3, padding:'1px 7px', fontWeight:700 }}>
         {count}
@@ -283,12 +283,12 @@ export function EventFeed() {
             borderRadius:5, padding:'6px 14px', textAlign:'center' as const }}>
             <div style={{ color: p.count > 0 ? p.c : `${p.c}44`,
               fontSize:20, fontWeight:700, lineHeight:1 }}>{p.count}</div>
-            <div style={{ color:'#5a8090', fontSize:'7px', letterSpacing:'.08em',
+            <div style={{ color:'#5a8090', fontSize:'11px', letterSpacing:'.08em',
               marginTop:2 }}>{p.label}</div>
           </div>
         ))}
         {lcLoading && (
-          <div style={{ color:'#4a7090', fontSize:'9px', alignSelf:'center' }}>
+          <div style={{ color:'#4a7090', fontSize:'13px', alignSelf:'center' }}>
             Loading…
           </div>
         )}
@@ -298,18 +298,18 @@ export function EventFeed() {
       {msCount > 0 && (
         <div style={{ background:'#00ee8808', border:'1px solid #00ee8822',
           borderRadius:5, padding:'10px 12px', marginBottom:14 }}>
-          <div style={{ color:'#00ee88', fontSize:'8px', letterSpacing:'.1em', marginBottom:6 }}>
+          <div style={{ color:'#00ee88', fontSize:'12px', letterSpacing:'.1em', marginBottom:6 }}>
             ✓✓ MULTI-SOURCE CONFIRMED — RIS + CLOUDFLARE RADAR
           </div>
           {(xref!.events as any[]).filter(e => e.multi_source).map((e:any,i:number) => (
             <div key={i} style={{ display:'flex', justifyContent:'space-between',
               alignItems:'center', marginBottom:3 }}>
-              <span style={{ color:'#3a7050', fontSize:'9px' }}>
+              <span style={{ color:'#3a7050', fontSize:'13px' }}>
                 {eventIcon(e.event_type)} {e.event_type.replace(/_/g,' ')}
                 {e.origin_name ? ` · ${e.origin_name}` : ` · AS${e.origin_asn}`}
                 {e.origin_country ? ` (${e.origin_country})` : ''}
               </span>
-              <span style={{ color:'#00ee88', fontSize:'9px', fontWeight:700 }}>
+              <span style={{ color:'#00ee88', fontSize:'13px', fontWeight:700 }}>
                 {(e.compound_confidence*100).toFixed(0)}%
               </span>
             </div>
@@ -324,7 +324,7 @@ export function EventFeed() {
           onToggle={() => toggleSection('escalated')} oldest={oldestEsc} />
         {!collapsedSections.has('escalated') && (
           escalated.length === 0
-            ? <div style={{ color:'#4a7090', fontSize:'9px', padding:'6px 0' }}>No escalated events</div>
+            ? <div style={{ color:'#4a7090', fontSize:'13px', padding:'6px 0' }}>No escalated events</div>
             : escalated.map((e,i) => (
                 <FeedCard key={i} e={e}
                   isMS={confirmedKeys.has(`${e.event_type}:${e.affected_prefix}:${e.origin_asn}`)}
@@ -341,7 +341,7 @@ export function EventFeed() {
           onToggle={() => toggleSection('open')} />
         {!collapsedSections.has('open') && (
           open.length === 0
-            ? <div style={{ color:'#4a7090', fontSize:'9px', padding:'6px 0' }}>No open events</div>
+            ? <div style={{ color:'#4a7090', fontSize:'13px', padding:'6px 0' }}>No open events</div>
             : open.map((e,i) => (
                 <FeedCard key={i} e={e}
                   isMS={confirmedKeys.has(`${e.event_type}:${e.affected_prefix}:${e.origin_asn}`)}
@@ -369,7 +369,7 @@ export function EventFeed() {
 
       {/* Empty state */}
       {events.length === 0 && !lcLoading && (
-        <div style={{ color:'#6aa8c0', textAlign:'center', padding:'40px 0', fontSize:'10px' }}>
+        <div style={{ color:'#6aa8c0', textAlign:'center', padding:'40px 0', fontSize:'12px' }}>
           No events in last 6 hours
         </div>
       )}
@@ -379,7 +379,7 @@ export function EventFeed() {
         <div style={{ background:'#00ee8808', border:'1px solid #00ee8822',
           borderRadius:5, padding:'16px', marginBottom:14, textAlign:'center' as const }}>
           <div style={{ color:'#00ee88', fontSize:12, marginBottom:5 }}>✓ Network healthy</div>
-          <div style={{ color:'#4a8060', fontSize:'9px' }}>
+          <div style={{ color:'#4a8060', fontSize:'13px' }}>
             {resolved.length} event{resolved.length !== 1 ? 's' : ''} resolved — no active anomalies
           </div>
         </div>

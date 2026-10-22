@@ -78,7 +78,7 @@ export function BaselinePanel() {
     <div style={{ padding:16, overflowY:'auto', height:'100%', fontFamily:'monospace',
       display:'flex', flexDirection:'column', gap:14 }}>
 
-      <div style={{ color:'#4a9fc8', fontSize:'8px', letterSpacing:'.12em' }}>
+      <div style={{ color:'#4a9fc8', fontSize:'12px', letterSpacing:'.12em' }}>
         BASELINE MODELING · Statistical anomaly detection
       </div>
 
@@ -89,7 +89,7 @@ export function BaselinePanel() {
           fontFamily:'monospace', textShadow:`0 0 18px ${hsc}66` }}>
           {hs > 0 ? hs.toFixed(1) : '—'}
         </div>
-        <div style={{ color:'#4a9fc8', fontSize:'9px', marginTop:4 }}>GLOBAL HEALTH SCORE</div>
+        <div style={{ color:'#4a9fc8', fontSize:'13px', marginTop:4 }}>GLOBAL HEALTH SCORE</div>
         {/* Gauge bar */}
         <div style={{ marginTop:10, height:6, background:'#0a1828', borderRadius:3 }}>
           <div style={{ width:`${Math.min(hs, 100)}%`, height:'100%',
@@ -97,16 +97,16 @@ export function BaselinePanel() {
             borderRadius:3, transition:'width .6s ease' }} />
         </div>
         <div style={{ display:'flex', justifyContent:'space-between', marginTop:3 }}>
-          <span style={{ color:'#ff3b3b', fontSize:'7px' }}>0 CRITICAL</span>
-          <span style={{ color:'#ffaa00', fontSize:'7px' }}>50</span>
-          <span style={{ color:'#00ee88', fontSize:'7px' }}>100 HEALTHY</span>
+          <span style={{ color:'#ff3b3b', fontSize:'11px' }}>0 CRITICAL</span>
+          <span style={{ color:'#ffaa00', fontSize:'11px' }}>50</span>
+          <span style={{ color:'#00ee88', fontSize:'11px' }}>100 HEALTHY</span>
         </div>
       </div>
 
       {/* Z-score bars */}
       {zsArr.length > 0 && (
         <div style={{ background:'#06111e', border:'1px solid #0d2035', borderRadius:5, padding:12 }}>
-          <div style={{ color:'#4a9fc8', fontSize:'8px', letterSpacing:'.1em', marginBottom:10 }}>
+          <div style={{ color:'#4a9fc8', fontSize:'12px', letterSpacing:'.1em', marginBottom:10 }}>
             ANOMALY Z-SCORES (±4σ scale)
           </div>
           {zsArr.map((r: any) => {
@@ -114,14 +114,14 @@ export function BaselinePanel() {
             return (
               <div key={r.event_type} style={{ marginBottom:10 }}>
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:3 }}>
-                  <span style={{ color:'#8fc4dc', fontSize:'9px' }}>
+                  <span style={{ color:'#8fc4dc', fontSize:'13px' }}>
                     {r.event_type.replace(/_/g, ' ')}
                   </span>
                   <div style={{ display:'flex', gap:8 }}>
-                    <span style={{ color:'#6aa8c0', fontSize:'8px' }}>
+                    <span style={{ color:'#6aa8c0', fontSize:'12px' }}>
                       {r.current_rate_ph.toFixed(1)}/h
                     </span>
-                    <span style={{ color:col, fontSize:'9px', fontWeight:700 }}>
+                    <span style={{ color:col, fontSize:'13px', fontWeight:700 }}>
                       {r.z_score > 0 ? '+' : ''}{r.z_score.toFixed(2)}σ
                     </span>
                   </div>
@@ -131,9 +131,9 @@ export function BaselinePanel() {
             )
           })}
           <div style={{ display:'flex', justifyContent:'space-between', marginTop:6 }}>
-            <span style={{ color:'#6aa8c0', fontSize:'7px' }}>−4σ</span>
-            <span style={{ color:'#6aa8c0', fontSize:'7px' }}>baseline</span>
-            <span style={{ color:'#6aa8c0', fontSize:'7px' }}>+4σ</span>
+            <span style={{ color:'#6aa8c0', fontSize:'11px' }}>−4σ</span>
+            <span style={{ color:'#6aa8c0', fontSize:'11px' }}>baseline</span>
+            <span style={{ color:'#6aa8c0', fontSize:'11px' }}>+4σ</span>
           </div>
         </div>
       )}
@@ -141,19 +141,19 @@ export function BaselinePanel() {
       {/* Update rate chart */}
       {buckets.length > 0 && (
         <div style={{ background:'#06111e', border:'1px solid #0d2035', borderRadius:5, padding:12 }}>
-          <div style={{ color:'#4a9fc8', fontSize:'8px', letterSpacing:'.1em', marginBottom:8 }}>
+          <div style={{ color:'#4a9fc8', fontSize:'12px', letterSpacing:'.1em', marginBottom:8 }}>
             UPDATE RATE · LAST 6 HOURS (5-min buckets)
           </div>
           <BucketChart buckets={[...buckets].reverse()} />
           <div style={{ display:'flex', justifyContent:'space-between', marginTop:4 }}>
-            <span style={{ color:'#6aa8c0', fontSize:'7px' }}>6h ago</span>
-            <span style={{ color:'#6aa8c0', fontSize:'7px' }}>now</span>
+            <span style={{ color:'#6aa8c0', fontSize:'11px' }}>6h ago</span>
+            <span style={{ color:'#6aa8c0', fontSize:'11px' }}>now</span>
           </div>
           <div style={{ display:'flex', gap:12, marginTop:6 }}>
             {[['#ff3b3b','High withdrawal'],['#ffaa00','Moderate'],['#00ccee','Normal']].map(([c,l])=>(
               <div key={l} style={{ display:'flex', alignItems:'center', gap:4 }}>
                 <div style={{ width:10, height:4, background:c, borderRadius:1 }} />
-                <span style={{ color:'#7ab8d4', fontSize:'7px' }}>{l}</span>
+                <span style={{ color:'#7ab8d4', fontSize:'11px' }}>{l}</span>
               </div>
             ))}
           </div>
@@ -163,7 +163,7 @@ export function BaselinePanel() {
       {/* Stats */}
       {summary && (
         <div style={{ background:'#06111e', border:'1px solid #0d2035', borderRadius:5, padding:12 }}>
-          <div style={{ color:'#4a9fc8', fontSize:'8px', letterSpacing:'.1em', marginBottom:8 }}>
+          <div style={{ color:'#4a9fc8', fontSize:'12px', letterSpacing:'.1em', marginBottom:8 }}>
             BGP UPDATE STATISTICS
           </div>
           {[
@@ -173,8 +173,8 @@ export function BaselinePanel() {
             ['Window',      `${summary.window_hours}h`],
           ].map(([k, v]) => (
             <div key={k as string} style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
-              <span style={{ color:'#7ab8d4', fontSize:'9px' }}>{k}</span>
-              <span style={{ color:'#ddeeff', fontSize:'9px' }}>{v}</span>
+              <span style={{ color:'#7ab8d4', fontSize:'13px' }}>{k}</span>
+              <span style={{ color:'#ddeeff', fontSize:'13px' }}>{v}</span>
             </div>
           ))}
         </div>

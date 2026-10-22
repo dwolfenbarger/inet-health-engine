@@ -455,7 +455,7 @@ export function GlobeView() {
     const group = groupRef.current; if (!group) return
     const updateGlobe = async () => {
       try {
-        const winM = Math.min(Math.max(Math.round(controls.timeWindowH * 60), 1), 30)
+        const winM = Math.min(Math.max(Math.round(controls.timeWindowH * 60), 1), 60)
         const [nr, ar] = await Promise.all([
           fetch(`/api/v1/globe/nodes?window_m=${winM}`),
           fetch('/api/v1/globe/arcs?window_m=5'),
@@ -475,7 +475,7 @@ export function GlobeView() {
           const pos   = ll3(n.lat, n.lon, GLOBE_R)
 
           if (!nodeMap.has(n.asn)) {
-            const radius = Math.min(0.010 + n.intensity * 0.018, 0.028)
+            const radius = Math.min(0.025 + n.intensity * 0.030, 0.055)
             const sphere = new THREE.Mesh(
               new THREE.SphereGeometry(radius, 8, 8),
               new THREE.MeshBasicMaterial({ color: isSel ? 0xffffff : col })
@@ -700,7 +700,7 @@ export function GlobeView() {
       ((e.clientX - rect.left) / rect.width)  *  2 - 1,
       -((e.clientY - rect.top)  / rect.height) *  2 + 1
     )
-    const ray = new THREE.Raycaster()
+    const ray = new THREE.Raycaster(); ray.params.Points = { threshold: 0.15 }
     ray.setFromCamera(mouse, camRef.current)
     const hits = ray.intersectObjects([...nodeMapRef.current.values()])
     if (!hits.length || !hits[0].object.userData.asn) return
@@ -761,7 +761,7 @@ export function GlobeView() {
       <div style={{ position:'absolute', top:12, right:12, display:'flex', flexDirection:'column', gap:4 }}>
         <div style={btnStyle} onClick={e => { e.stopPropagation(); zoom(1) }} title="Zoom in">+</div>
         <div style={btnStyle} onClick={e => { e.stopPropagation(); zoom(-1) }} title="Zoom out">−</div>
-        <div style={{ ...btnStyle, fontSize:9, height:22, color:'#6aa8c0', letterSpacing:'.05em' }}
+        <div style={{ ...btnStyle, fontSize:13, height:22, color:'#6aa8c0', letterSpacing:'.05em' }}
           onClick={e => { e.stopPropagation(); camZRef.current = CAM_DEF }} title="Reset zoom">⊙</div>
       </div>
 
@@ -769,7 +769,7 @@ export function GlobeView() {
       {pathMode && (
         <div style={{ position:'absolute', top:10, left:'50%', transform:'translateX(-50%)',
           background:'#0a0820cc', border:'1px solid #aa44ff66', borderRadius:4,
-          padding:'4px 14px', fontSize:'9px', color:'#aa44ff', fontFamily:'monospace',
+          padding:'4px 14px', fontSize:'13px', color:'#aa44ff', fontFamily:'monospace',
           pointerEvents:'none' }}>
           {!pathSrcASN ? 'Click SOURCE AS on globe'
             : !pathDstASN ? `SRC: AS${pathSrcASN} — Click DEST AS`
@@ -787,13 +787,13 @@ export function GlobeView() {
         ] as [string,string][]).map(([c,l]) => (
           <div key={l} style={{ display:'flex', alignItems:'center', gap:5, marginBottom:3 }}>
             <div style={{ width:14, height:2, background:c, borderRadius:1 }} />
-            <span style={{ color:'#7ab8d4', fontSize:'8px' }}>{l}</span>
+            <span style={{ color:'#7ab8d4', fontSize:'12px' }}>{l}</span>
           </div>
         ))}
       </div>}
 
       {!isMobile && <div style={{ position:'absolute', bottom:8, right:10,
-        fontSize:'8px', color:'#8fc4dc', fontFamily:'monospace', pointerEvents:'none' }}>
+        fontSize:'12px', color:'#8fc4dc', fontFamily:'monospace', pointerEvents:'none' }}>
         RIPE RIS · Natural Earth 110m · TeleGeography · scroll to zoom
       </div>}
     </div>

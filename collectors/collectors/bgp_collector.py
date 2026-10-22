@@ -162,10 +162,20 @@ def _bgpstream_stub(window_start: int, window_end: int) -> list[dict]:
         "1.1.1.0/24", "8.8.8.0/24", "9.9.9.0/24",
         "104.16.0.0/12", "13.32.0.0/15", "151.101.0.0/16",
     ]
-    test_asns = [13335, 15169, 8075, 16509, 20940, 32934]
+    # Expanded set of well-known ASNs present in ASN_GEO for richer globe coverage
+    test_asns = [
+        13335, 15169, 8075, 16509, 20940, 32934,   # Cloudflare, Google, Microsoft, Amazon, Akamai, Facebook
+        3356, 174, 1299, 2914, 3257, 6939,         # Lumen, Cogent, Telia, NTT, GTT, Hurricane
+        701, 7018, 7922, 209, 1239, 6461,          # Verizon, AT&T, Comcast, Qwest, Sprint, Zayo
+        2497, 2516, 4713, 4760, 10026,             # IIJ, KDDI, NTT, Telstra, Pacnet
+        4809, 4134, 4837, 9808, 23724,             # China Telecom, Chinanet, China Unicom, CMCC, China169
+        4755, 9498, 55836, 132215,                 # Tata, BHARTI, Reliance, Bharti
+        6453, 3491, 1273, 3320, 5511, 12956,       # TATA, PCCW, Vodafone, DT, Orange, Telefonica
+        2906, 9002, 4637, 7473, 4804,              # Netflix, RETN, Telstra, Singtel, Microplex
+    ]
     results = []
 
-    for _ in range(random.randint(10, 40)):
+    for _ in range(random.randint(80, 150)):
         prefix = random.choice(test_prefixes)
         origin = random.choice(test_asns)
         path_len = random.randint(2, 5)
