@@ -33,6 +33,14 @@ class LiveIntegrityTests(unittest.TestCase):
         self.assertEqual(rows[0].as_path,[])
         self.assertIsNone(rows[0].origin_asn)
 
+    def test_peer_address_is_not_reported_as_the_forwarding_next_hop(self):
+        rows=parse_ris_message({'data':{'type':'UPDATE','path':[174,13335],
+            'peer':'192.0.2.1','host':'rrc00.ripe.net',
+            'announcements':[{'next_hop':'192.0.2.2','prefixes':['1.1.1.0/24']}],
+            'withdrawals':['9.9.9.0/24']}})
+        self.assertEqual(rows[0].next_hop,'192.0.2.2')
+        self.assertIsNone(rows[1].next_hop)
+
     def test_failed_storage_cannot_report_success(self):
         class Broken:
             def acquire(self):

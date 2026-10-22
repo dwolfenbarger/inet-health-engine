@@ -47,7 +47,6 @@ def parse_ris_message(raw: dict) -> list[BGPUpdate]:
     host      = data.get("host", "rrc00.ripe.net")
     collector = host.split(".")[0]
     peer_asn  = int(data.get("peer_asn", 0)) or None
-    next_hop  = data.get("peer")
 
     # Preserve repeated ASNs: prepending and loops are routing evidence.
     # AS_SET segments cannot be represented by the current integer[] schema;
@@ -76,7 +75,7 @@ def parse_ris_message(raw: dict) -> list[BGPUpdate]:
                     time=dt, prefix=prefix, origin_asn=origin_asn,
                     as_path=as_path, communities=communities,
                     change_type=BGPChangeType.ANNOUNCE, collector=collector,
-                    peer_asn=peer_asn, next_hop=next_hop or ann.get("next_hop"),
+                    peer_asn=peer_asn, next_hop=ann.get("next_hop"),
                     rpki_status=RPKIStatus.UNKNOWN,
                 ))
             except Exception:
@@ -95,7 +94,7 @@ def parse_ris_message(raw: dict) -> list[BGPUpdate]:
                 time=dt, prefix=str(prefix), origin_asn=withdraw_origin,
                 as_path=as_path, communities=communities,
                 change_type=BGPChangeType.WITHDRAW, collector=collector,
-                peer_asn=peer_asn, next_hop=next_hop,
+                peer_asn=peer_asn, next_hop=None,
                 rpki_status=RPKIStatus.UNKNOWN,
             ))
         except Exception:
