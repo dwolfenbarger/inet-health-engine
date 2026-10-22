@@ -112,6 +112,24 @@ async def snapshot(
         a = row["origin_asn"]
         if a:
             origins[a] = origins.get(a, 0) + 1
+    # Current validation is distinct from the status cached at ingestion.
+    if routes:
+        import json
+        try:
+            evidence_rows=await pool.fetch("""SELECT evidence_id,observed_at,payload FROM source_evidence
+                WHERE source='rpki-local' AND evidence_id=ANY($1::text[])
+                  AND observed_at>now()-interval '20 minutes'""",
+                [f"{r['prefix']}|{r['origin_asn']}" for r in routes if r['origin_asn']])
+        except Exception:
+            raise HTTPException(503,'Current origin validation evidence unavailable') from None
+        validations={r['evidence_id']:r for r in evidence_rows}
+        for route in routes:
+            route['rpki_at_ingestion']=route['rpki_status']
+            record=validations.get(f"{route['prefix']}|{route['origin_asn']}")
+            value=record['payload'] if record else None
+            if isinstance(value,str):value=json.loads(value)
+            route['rpki_validation']=value
+            route['rpki_status']=value['status'] if value else 'unknown'
     return {
         "as_of": now, "source": "RIPE RIS Live", "source_state": freshness(latest, now),
         "last_observation": latest, "health_score": None,
@@ -129,7 +147,7 @@ async def snapshot(
         "limitations": ["Sampled update stream, not a complete routing table or proof of reachability.",
                         "Collector coordinates are approximate city locations, not ASN locations or traffic paths.",
                         "Anomaly candidates are heuristic signals, not confirmed hijacks or outages.",
-                        "Congestion, packet loss and latency are not established by this BGP feed.",
+                        "Congestion, packet loss and latency are not established by this BGP feed; inspect separate measurement evidence.",
                         "Historical AS paths before this release may have lost repeated ASNs.",
                         "Historical candidates without collector attribution are excluded from collector-filtered results.",
                         "Collection is a bounded sample: up to 50,000 updates per 60-second window, scheduled every 90 seconds.",
@@ -137,3 +155,73 @@ async def snapshot(
                         "Complex AS_SET paths cannot be represented by the current schema and have an empty AS sequence."],
         "metadata_source": "https://ris.ripe.net/docs/route-collectors/",
     }
+
+
+# Source collection status is global metadata, independent of investigation filters.
+SOURCE_CATALOG = [
+    ('ris','RIPE RIS Live','Routing','RIS','https://ris-live.ripe.net/',240),
+    ('rpki-local','Local RPKI validator','Origin authorization','RIR signed ROAs','https://routinator.docs.nlnetlabs.nl/',1200),
+    ('atlas','RIPE Atlas','Reachability / latency / DNS','Atlas probes','https://atlas.ripe.net/',1200),
+    ('ioda','IODA','Outage candidates','RIS + RouteViews / active probing / telescope','https://ioda.inetintel.cc.gatech.edu/',1200),
+    ('routeviews','RouteViews','Routing','RouteViews (some peers overlap RIS)','https://www.routeviews.org/',1200),
+    ('radar','Cloudflare Radar','Traffic / provider events','Cloudflare perspective; routing may overlap collectors','https://radar.cloudflare.com/',1200),
+    ('mlab','M-Lab / HERMES','Performance baselines','M-Lab test population','https://www.measurementlab.net/',86400),
+]
+
+
+def source_state(row,now,threshold):
+    if not row:return 'unavailable'
+    if row['state'] in ['error','unconfigured']:return row['state']
+    if not row['last_success']:return 'unavailable'
+    if (now-row['last_success']).total_seconds()>threshold:return 'stale'
+    return row['state']
+
+
+@router.get('/sources')
+async def sources():
+    import json
+    now=datetime.now(timezone.utc)
+    try:
+        pool=await get_pg_pool()
+        rows=await pool.fetch('SELECT * FROM source_status')
+        by_source={r['source']:dict(r) for r in rows}
+        latest=await pool.fetchval("SELECT max(time) FROM bgp_updates WHERE time>now()-interval '24 hours' AND collector=ANY($1::text[])",list(COLLECTORS))
+        result=[]
+        for key,name,role,lineage,url,threshold in SOURCE_CATALOG:
+            row=by_source.get(key)
+            if key=='ris':
+                row={'state':'partial','last_attempt':None,'last_success':latest,
+                     'last_observation':latest,'records':None,'error_code':None,
+                     'detail':{'scope':'Five configured RIS collectors; bounded intermittent update sample',
+                               'limitations':['No complete RIB or continuous collection yet.']}}
+            value={k:row.get(k) if row else None for k in ['last_attempt','last_success','last_observation','records','error_code']}
+            detail=row.get('detail',{}) if row else {'scope':'No verified collection is available'}
+            if isinstance(detail,str):detail=json.loads(detail)
+            result.append({'id':key,'name':name,'role':role,'lineage':lineage,'url':url,
+                'state':source_state(row,now,threshold),'detail':detail,**value})
+        return {'as_of':now,'scope':'Global source collection status; counts are not filtered by the selected ASN or prefix',
+                'health_score':None,'sources':result}
+    except Exception:
+        raise HTTPException(503,'Source evidence store unavailable') from None
+
+
+@router.get('/evidence/{source}')
+async def evidence(source:str,asn:int|None=Query(None,ge=1,le=4294967295),
+                   family:Literal['all','4','6']='all',limit:int=Query(25,ge=1,le=100)):
+    import json
+    if source not in {r[0] for r in SOURCE_CATALOG}:raise HTTPException(404,'Unknown source')
+    try:
+        pool=await get_pg_pool()
+        rows=await pool.fetch('''SELECT observed_at,asn,family,resource,payload FROM source_evidence
+            WHERE source=$1 AND ($2::bigint IS NULL OR asn=$2)
+              AND ($3='all' OR family::text=$3) ORDER BY observed_at DESC LIMIT $4
+        ''',source,asn,family,limit)
+        records=[]
+        for row in rows:
+            r=dict(row)
+            if isinstance(r['payload'],str):r['payload']=json.loads(r['payload'])
+            records.append(r)
+        return {'source':source,'as_of':datetime.now(timezone.utc),'records':records,
+                'scope':{'asn':asn,'family':family,'limit':limit},'health_score':None}
+    except Exception:
+        raise HTTPException(503,'Source evidence store unavailable') from None
