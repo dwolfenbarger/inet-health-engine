@@ -136,7 +136,7 @@ async def import_file(observer,row,file,kind,cache):
         if kind=='rib':
             await conn.execute('''UPDATE routing_observers SET baseline_at=$2,baseline_state='snapshot',
                 snapshot_v4=$3,snapshot_v6=$4,error_code=NULL WHERE id=$1''',observer['id'],file['at'],v4,v6)
-            await conn.execute("UPDATE routing_gaps SET from_at=$2 WHERE observer=$1 AND from_at IS NULL",observer['id'],file['at'])
+            await conn.execute("UPDATE routing_gaps SET from_at=$2 WHERE observer=$1 AND from_at IS NULL AND (until_at IS NULL OR until_at>=$2)",observer['id'],file['at'])
             await conn.execute('''UPDATE routing_gaps SET state='snapshot_superseded',repaired_at=now()
                 WHERE observer=$1 AND until_at<=$2 AND state<>'repaired' ''',observer['id'],file['at'])
     path.unlink() # Only this disposable download; source URL/hash/audit remain durable.
