@@ -1,0 +1,4 @@
+[
+ {"id":"ris-rrc23-as133210-v6","source":"ris-continuous","collector":"rrc23","peer_ip":"2001:de8:4::13:3210:1","peer_asn":133210,"mode":"ris-live","city":"Singapore","region":"Asia","inventory_date":"2026-10-22","inventory_v4":0,"inventory_v6":262441},
+ {"id":"rv-kixp-as30844-v4","source":"routeviews","collector":"route-views.kixp","peer_ip":"196.223.21.44","peer_asn":30844,"mode":"mrt","city":"Nairobi","region":"Africa","archive_base":"https://archive.routeviews.org/route-views.kixp/bgpdata/","inventory_date":"2026-10-22","inventory_v4":1072417,"inventory_v6":0}
+]
