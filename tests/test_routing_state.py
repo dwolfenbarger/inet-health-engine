@@ -63,4 +63,28 @@ class RoutingTests(unittest.TestCase):
         with self.assertRaises(AuditError):self.write_audit(self.record(16,9,body))
         with self.assertRaises(AuditError):self.write_audit(b'\x00'*5)
 
+
+class ReplaySchedulingTests(unittest.IsolatedAsyncioTestCase):
+    async def test_budget_yields_without_reapplying_committed_archives(self):
+        from unittest.mock import AsyncMock,patch
+        from collectors.routing_mrt import replay_files,ReplayPending
+        pool=AsyncMock();pool.fetchval.return_value=['committed']
+        files=[{'url':s} for s in ['committed','next','later']]
+        importer=AsyncMock()
+        with patch('collectors.routing_mrt.get_pg_pool',AsyncMock(return_value=pool)),patch('collectors.routing_mrt.import_file',importer):
+            with self.assertRaises(ReplayPending):
+                await replay_files({'id':'test'},{'generation':'test'},files,Path('/tmp'),budget=1)
+        self.assertEqual(importer.await_count,1)
+        self.assertEqual(importer.await_args.args[2]['url'],'next')
+    async def test_graceful_stop_leaves_archive_boundary_unmodified(self):
+        import asyncio
+        from unittest.mock import AsyncMock,patch
+        from collectors.routing_mrt import replay_files,ReplayPending
+        pool=AsyncMock();pool.fetchval.return_value=[]
+        stop=asyncio.Event();stop.set();importer=AsyncMock()
+        with patch('collectors.routing_mrt.get_pg_pool',AsyncMock(return_value=pool)),patch('collectors.routing_mrt.import_file',importer):
+            with self.assertRaises(ReplayPending):
+                await replay_files({'id':'test'},{'generation':'test'},[{'url':'next'}],Path('/tmp'),stop)
+        importer.assert_not_awaited()
+
 if __name__=='__main__':unittest.main()
