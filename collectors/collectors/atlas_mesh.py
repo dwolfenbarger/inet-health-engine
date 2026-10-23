@@ -67,7 +67,13 @@ def check_measurement(meta,pair,target):
         raise ValueError('Measurement metadata differs')
     if not {'anchoring','mesh'}<=set(meta.get('tags',[])) or meta.get('status',{}).get('id')!=2:raise ValueError('Not an ongoing public anchoring mesh')
     if ip_address(meta['target_ip'])!=ip_address(target[f"ip_v{pair['family']}"]):raise ValueError('Target address changed')
-    if int(meta.get('target_asn') or 0)!=target[f"as_v{pair['family']}"]:raise ValueError('Target ASN metadata differs')
+    target_asn(meta) # Validate optional metadata without inventing a destination ASN.
+
+def target_asn(meta):
+    value=meta.get('target_asn')
+    if value is None:return None
+    if isinstance(value,bool) or not 1<=int(value)<=4294967295:raise ValueError('Invalid target ASN metadata')
+    return int(value)
 
 async def get_json(client,url,params=None,max_bytes=2*1024**2):
     async with client.stream('GET',url,params=params) as response:
@@ -101,7 +107,8 @@ async def cycle(config):
                 if not rows:raise ValueError('No measurement results')
                 summary=summarize(rows,now)
                 observed=rows[-1]['at'] if rows else now
-                payload={'pair':pair,'source':source,'target':target,**summary,'observed_at':rows[-1]['at'].isoformat() if rows else None,
+                payload={'pair':pair,'source':source,'target':target,'source_asn':source[f'as_v{af}'],'target_asn':target_asn(metadata[mid]),
+                    'asn_basis':'Source ASN is current probe metadata; target ASN is separate measurement metadata and may be unknown. Anchor as_v4/as_v6 describe its probe network.',**summary,'observed_at':rows[-1]['at'].isoformat() if rows else None,
                     'fetched_at':now.isoformat(),'measurement_url':f'https://atlas.ripe.net/measurements/{mid}/',
                     'raw_evidence_url':str(httpx.URL(url,params=params)),
                     'trace_evidence_url':BASE+f"measurements/{pair['trace_measurement_id']}/results/?probe_ids={source['probe']}&start={int((now-timedelta(hours=1)).timestamp())}" if pair.get('trace_measurement_id') else None,

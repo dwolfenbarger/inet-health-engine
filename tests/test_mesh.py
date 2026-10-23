@@ -30,3 +30,8 @@ class MeshTests(unittest.TestCase):
 
  def test_probe_disconnect_is_measurement_unavailable(self):
   self.assertEqual(mesh_state({'observed_at':self.now.isoformat(),'state':'observations_available','source_probe_status':{'id':2}},self.now),'probe_disconnected')
+
+ def test_missing_destination_asn_is_unknown_not_probe_asn(self):
+  from collectors.atlas_mesh import target_asn
+  self.assertIsNone(target_asn({'target_asn':None}))
+  self.assertEqual(target_asn({'target_asn':4288000245}),4288000245)

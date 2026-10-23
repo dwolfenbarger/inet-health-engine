@@ -27,7 +27,7 @@ async def mesh_data(pool,family='all',asn=None):
     directions=[]
     for row in rows:
         p=decode(row['payload']);af=p['pair']['family']
-        if asn and asn not in [p['source'][f'as_v{af}'],p['target'][f'as_v{af}']]:continue
+        if asn and asn not in [p['source'][f'as_v{af}'],p.get('target_asn')]:continue
         state=mesh_state(p,now,row['evidence_id'] in errors or bool(status and status['state']=='error'))
         # Raw series is available from the bounded detail route, not every refresh.
         value={k:v for k,v in p.items() if k!='raw_stats'};value['collection_state']=state
@@ -37,12 +37,12 @@ async def mesh_data(pool,family='all',asn=None):
     for pair in detail.get('pairs',[]):
         if pair['id'] in known or (family!='all' and str(pair['family'])!=family):continue
         source,target=anchors[pair['source_probe']],anchors[pair['target_probe']];af=pair['family']
-        if asn and asn not in [source[f'as_v{af}'],target[f'as_v{af}']]:continue
+        if asn and asn not in [source[f'as_v{af}']]:continue
         directions.append({'pair':pair,'source':source,'target':target,'collection_state':'no_observations','observed_at':None})
     return {'as_of':now,'health_score':None,'directions':directions,'source_status':{
         'state':status['state'] if status else 'unavailable','last_success':status['last_success'] if status else None,
         'error_code':status['error_code'] if status else None},
-        'scope':'Selected anchor-to-anchor directions; ASN filter selects endpoints only. Independent of routing resource and time-window filters.',
+        'scope':'Selected anchor-to-anchor directions; ASN filter selects source probe ASN or destination measurement ASN only. Unknown target ASNs are excluded from ASN matching. Independent of routing resource and time-window filters.',
         'limitations':['No global coverage denominator or health percentage is established.',
           'A measured path does not establish performance for every network in its endpoint countries.',
           'Candidate thresholds indicate a measurement change, not confirmed congestion or an outage.']}
