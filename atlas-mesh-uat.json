@@ -1,5 +1,5 @@
 {
-  "inventory_at": 1792740931,
+  "inventory_at": 1792741537,
   "anchors": [
     {
       "id": 1838,
@@ -102,28 +102,28 @@
       }
     },
     {
-      "id": 2497,
-      "probe": 6996,
+      "id": 3256,
+      "probe": 7166,
       "city": "Singapore",
       "country": "SG",
-      "fqdn": "sg-sin-as12008.anchors.atlas.ripe.net",
-      "ip_v4": "203.119.15.254",
-      "ip_v6": "2610:a1:3070:252::254",
-      "as_v4": 12008,
-      "as_v6": 12008,
+      "fqdn": "sg-sin-as132337.anchors.atlas.ripe.net",
+      "ip_v4": "103.69.212.8",
+      "ip_v6": "2406:c140:65:8::8",
+      "as_v4": 132337,
+      "as_v6": 132337,
       "geometry": {
         "type": "Point",
         "coordinates": [
-          103.7898406,
-          1.2951663
+          103.819836,
+          1.352083
         ]
       },
       "region": "Asia",
       "measurements": {
-        "traceroute4": 29779917,
-        "ping4": 29779918,
-        "traceroute6": 29779920,
-        "ping6": 29779921
+        "traceroute4": 48495046,
+        "ping4": 48495047,
+        "traceroute6": 48495053,
+        "ping6": 48495054
       }
     },
     {
@@ -275,68 +275,68 @@
       "trace_measurement_id": 66196987
     },
     {
-      "id": "7540-6996-v4",
+      "id": "7540-7166-v4",
       "source_probe": 7540,
-      "target_probe": 6996,
+      "target_probe": 7166,
       "family": 4,
-      "measurement_id": 29779918,
-      "trace_measurement_id": 29779917
+      "measurement_id": 48495047,
+      "trace_measurement_id": 48495046
     },
     {
-      "id": "7540-6996-v6",
+      "id": "7540-7166-v6",
       "source_probe": 7540,
-      "target_probe": 6996,
+      "target_probe": 7166,
       "family": 6,
-      "measurement_id": 29779921,
-      "trace_measurement_id": 29779920
+      "measurement_id": 48495054,
+      "trace_measurement_id": 48495053
     },
     {
-      "id": "6996-7540-v4",
-      "source_probe": 6996,
+      "id": "7166-7540-v4",
+      "source_probe": 7166,
       "target_probe": 7540,
       "family": 4,
       "measurement_id": 105131138,
       "trace_measurement_id": 105131137
     },
     {
-      "id": "6996-7540-v6",
-      "source_probe": 6996,
+      "id": "7166-7540-v6",
+      "source_probe": 7166,
       "target_probe": 7540,
       "family": 6,
       "measurement_id": 105131143,
       "trace_measurement_id": 105131142
     },
     {
-      "id": "6996-6849-v4",
-      "source_probe": 6996,
+      "id": "7166-6849-v4",
+      "source_probe": 7166,
       "target_probe": 6849,
       "family": 4,
       "measurement_id": 26858348,
       "trace_measurement_id": 26858347
     },
     {
-      "id": "6996-6849-v6",
-      "source_probe": 6996,
+      "id": "7166-6849-v6",
+      "source_probe": 7166,
       "target_probe": 6849,
       "family": 6,
       "measurement_id": 26858351,
       "trace_measurement_id": 26858350
     },
     {
-      "id": "6849-6996-v4",
+      "id": "6849-7166-v4",
       "source_probe": 6849,
-      "target_probe": 6996,
+      "target_probe": 7166,
       "family": 4,
-      "measurement_id": 29779918,
-      "trace_measurement_id": 29779917
+      "measurement_id": 48495047,
+      "trace_measurement_id": 48495046
     },
     {
-      "id": "6849-6996-v6",
+      "id": "6849-7166-v6",
       "source_probe": 6849,
-      "target_probe": 6996,
+      "target_probe": 7166,
       "family": 6,
-      "measurement_id": 29779921,
-      "trace_measurement_id": 29779920
+      "measurement_id": 48495054,
+      "trace_measurement_id": 48495053
     },
     {
       "id": "6849-7047-v4",

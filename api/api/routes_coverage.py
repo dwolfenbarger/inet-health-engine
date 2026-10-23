@@ -13,6 +13,7 @@ def mesh_state(payload,now,failed=False):
     at=payload.get('observed_at')
     if failed:return 'collection_error'
     if not at:return 'no_observations'
+    if any(payload.get(k,{}).get('id')!=1 for k in ['source_probe_status','target_probe_status'] if k in payload):return 'probe_disconnected'
     age=(now-datetime.fromisoformat(at)).total_seconds()
     if not -120<=age<=1200:return 'stale'
     return payload['state']
@@ -22,7 +23,7 @@ async def mesh_data(pool,family='all',asn=None):
     status=await pool.fetchrow("SELECT * FROM source_status WHERE source='atlas-mesh'")
     detail=decode(status['detail']) if status else {}
     errors={e['pair'] for e in detail.get('errors',[])}
-    rows=await pool.fetch("SELECT evidence_id,observed_at,payload FROM source_evidence WHERE source='atlas-mesh' AND ($1='all' OR family::text=$1) ORDER BY evidence_id LIMIT 32",family)
+    rows=await pool.fetch("SELECT evidence_id,observed_at,payload FROM source_evidence WHERE source='atlas-mesh' AND ($1='all' OR family::text=$1) AND evidence_id=ANY($2::text[]) ORDER BY evidence_id LIMIT 32",family,[p['id'] for p in detail.get('pairs',[])])
     directions=[]
     for row in rows:
         p=decode(row['payload']);af=p['pair']['family']
@@ -73,7 +74,7 @@ async def coverage():
         for region in REGIONS:
             observers=[v for v in views if v['region']==region]
             directions=[d for d in performance['directions'] if region in [d['source']['region'],d['target']['region']]]
-            current=[d for d in directions if d['collection_state'] not in ['no_observations','stale','collection_error','insufficient_recent_samples']]
+            current=[d for d in directions if d['collection_state'] not in ['no_observations','stale','collection_error','insufficient_recent_samples','probe_disconnected']]
             anchors={d[k]['probe'] for d in directions for k in ['source','target'] if d[k]['region']==region}
             regions.append({'region':region,'routing_observers':len(observers),
               'snapshot_v4':sum(v['snapshot_v4'] for v in observers),'snapshot_v6':sum(v['snapshot_v6'] for v in observers),

@@ -127,7 +127,12 @@ async def main(path,once=False):
     try:
         while not stop.is_set():
             try:await asyncio.wait_for(cycle(config),timeout=240)
-            except Exception as exc:await source_failure(SOURCE,exc);print('ATLAS_MESH_PENDING',type(exc).__name__,flush=True)
+            except Exception as exc:
+                await save_cycle(SOURCE,[],{'scope':'Configured Atlas mesh; collection failed',
+                    'anchors':config['anchors'],'pairs':config['pairs'],
+                    'errors':[{'pair':p['id'],'error_type':type(exc).__name__} for p in config['pairs']]},
+                    state='error',error_code=type(exc).__name__)
+                print('ATLAS_MESH_PENDING',type(exc).__name__,flush=True)
             if once:break
             try:await asyncio.wait_for(stop.wait(),timeout=300)
             except asyncio.TimeoutError:pass
