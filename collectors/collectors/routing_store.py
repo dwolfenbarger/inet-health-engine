@@ -91,3 +91,18 @@ async def archive_batch(observer,epoch,generation,changes,rank,tag):
         row=await conn.fetchrow('SELECT * FROM routing_observers WHERE id=$1 FOR UPDATE',observer['id'])
         if row['epoch']!=epoch or row['generation']!=generation:raise RuntimeError('Observer session changed during archive import')
         await conn.executemany(UPSERT,[route_row(observer['id'],item,row,rank,f'{tag}:{i:020d}') for i,item in changes])
+
+async def finalize_snapshot(conn,observer,epoch,generation,at,url):
+    """A complete snapshot supersedes pre-snapshot live entries absent from it.
+
+    Imported entries carry the snapshot timestamp. Newer live entries must win;
+    an absent entry is snapshot evidence, not an invented BGP withdrawal.
+    Caller holds the observer lock after independently auditing the full RIB.
+    """
+    result=await conn.execute('''UPDATE routing_routes SET present=false,origin_asn=NULL,path='[]'::jsonb,
+        event_at=$4,rank=0,event_order='snapshot-absence',
+        attrs=jsonb_build_object('snapshot_absence',true,'snapshot_url',$5::text),
+        evidence_id=$5||'#snapshot-absence:'||prefix::text
+        WHERE observer=$1 AND epoch=$2 AND generation=$3 AND present AND event_at<$4''',
+        observer,epoch,generation,at,url)
+    return int(result.split()[-1])

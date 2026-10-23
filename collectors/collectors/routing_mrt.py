@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from collectors.config import settings
 from collectors.db import get_pg_pool,close_pg_pool
 from collectors.routing_model import stamp,mrt_change
-from collectors.routing_store import register,archive_batch
+from collectors.routing_store import register,archive_batch,finalize_snapshot
 from collectors.mrt_audit import audit
 
 UTC=timezone.utc
@@ -130,6 +130,7 @@ async def import_file(observer,row,file,kind,cache):
     async with pool.acquire() as conn,conn.transaction():
         current=await conn.fetchrow('SELECT * FROM routing_observers WHERE id=$1 FOR UPDATE',observer['id'])
         if current['epoch']!=row['epoch'] or current['generation']!=row['generation']:raise RuntimeError('Observer changed during import')
+        if kind=='rib':review['snapshot_absences']=await finalize_snapshot(conn,observer['id'],row['epoch'],row['generation'],file['at'],file['url'])
         await conn.execute('''INSERT INTO routing_archives(observer,url,generation,kind,start_at,until_at,sha256,bytes,records,audit)
             VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb) ON CONFLICT DO NOTHING''',observer['id'],file['url'],row['generation'],kind,
             file['at'],file['until'],digest,path.stat().st_size,count,json.dumps(review))

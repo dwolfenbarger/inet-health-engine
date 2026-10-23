@@ -15,7 +15,7 @@ candidate=Path(sys.argv[1]) if len(sys.argv)>1 else root
 sys.path[:0]=[str(candidate/'collectors'),str(candidate/'api')]
 async def main():
  import asyncpg
- from collectors.routing_store import register,commit_messages,open_gap,archive_batch
+ from collectors.routing_store import register,commit_messages,open_gap,archive_batch,finalize_snapshot
  from collectors.routing_model import mrt_change
  c=await asyncpg.connect(os.environ['TIMESCALE_DSN'])
  class Pool:
@@ -73,6 +73,17 @@ async def main():
      assert (await client.get('/routing/routes?ip=1.1.1.1&include_withdrawn=true')).status_code==422
      assert (await client.get('/routing/routes?ip=invalid')).status_code==422
      assert (await client.get('/routing/routes?limit=201')).status_code==422
+   # A full snapshot removes older live-only entries absent from the audited RIB,
+   # while retaining a post-snapshot announcement and an actual snapshot entry.
+   await commit_messages(obs,[frame('post-snapshot',6,announcements=[{'prefixes':['8.8.8.0/24']}])])
+   snap={**old,'prefix':'192.0.2.0/24'}
+   await archive_batch(obs,observed['epoch'],observed['generation'],[(1,mrt_change(snap,obs,snapshot=now+timedelta(seconds=5)))],0,'snapshot')
+   removed=await finalize_snapshot(c,obs['id'],observed['epoch'],observed['generation'],now+timedelta(seconds=5),'https://test/snapshot')
+   assert removed>=1
+   assert not await c.fetchval("SELECT present FROM routing_routes WHERE observer=$1 AND prefix='1.0.0.0/8'",obs['id'])
+   assert await c.fetchval("SELECT attrs->>'snapshot_absence' FROM routing_routes WHERE observer=$1 AND prefix='1.0.0.0/8'",obs['id'])=='true'
+   for prefix in ['8.8.8.0/24','192.0.2.0/24']:
+    assert await c.fetchval('SELECT present FROM routing_routes WHERE observer=$1 AND prefix=$2::text::cidr',obs['id'],prefix)
    await c.execute("UPDATE routing_observers SET baseline_at=$2,baseline_state='reconstructed',snapshot_v4=1 WHERE id=$1",obs['id'],now)
    await commit_messages(obs,[frame('DOWN',4,kind='RIS_PEER_STATE',state='down')])
    reset=await c.fetchrow('SELECT * FROM routing_observers WHERE id=$1',obs['id'])
