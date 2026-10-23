@@ -92,7 +92,7 @@ async def main(config):
     loop=asyncio.get_running_loop()
     for sig in [signal.SIGTERM,signal.SIGINT]:loop.add_signal_handler(sig,STOP.set)
     observers=json.loads(Path(config).read_text())
-    if len(observers)>4:raise ValueError('Review capacity before enabling more than four observers')
+    if len(observers)>6 or sum(o['mode']=='ris-live' for o in observers)>4:raise ValueError('Review capacity before enabling more than four RIS or six total observers')
     await capacity()
     lock=await asyncpg.connect(settings.timescale_dsn)
     if not await lock.fetchval("SELECT pg_try_advisory_lock(hashtext('inet-routing-stream'))"):

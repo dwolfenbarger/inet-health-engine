@@ -17,3 +17,9 @@
 .live-noc .maintained-coverage td{min-width:150px}
 .live-noc .maintained-coverage .panel-heading{gap:14px;flex-wrap:wrap}
 .live-noc select:disabled{opacity:.6;cursor:not-allowed}
+
+.global-coverage small{display:block;color:#b2c3ce;margin-top:5px}
+.global-coverage .panel-heading{flex-wrap:wrap;gap:12px}
+.global-coverage .mesh-scroll{max-height:500px;overflow:auto}
+.global-coverage td{min-width:130px}
+.global-coverage .measurement-candidate{color:#f0bd77}

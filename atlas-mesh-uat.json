@@ -1,0 +1,406 @@
+{
+  "inventory_at": 1792740931,
+  "anchors": [
+    {
+      "id": 1838,
+      "probe": 6585,
+      "city": "Ashburn",
+      "country": "US",
+      "fqdn": "us-abn-as36236.anchors.atlas.ripe.net",
+      "ip_v4": "192.73.253.2",
+      "ip_v6": "2607:fc50:3000:53::2",
+      "as_v4": 36236,
+      "as_v6": 36236,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -77.4608979,
+          39.0219927
+        ]
+      },
+      "region": "North America",
+      "measurements": {
+        "traceroute4": 22453851,
+        "ping4": 22453852,
+        "traceroute6": 22453854,
+        "ping6": 22453855
+      }
+    },
+    {
+      "id": 2826,
+      "probe": 7022,
+      "city": "Tangstedt",
+      "country": "DE",
+      "fqdn": "de-57x-as200567.anchors.atlas.ripe.net",
+      "ip_v4": "185.70.144.118",
+      "ip_v6": "2a05:2a80:1::300",
+      "as_v4": 200567,
+      "as_v6": 200567,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          10.0839485,
+          53.736687
+        ]
+      },
+      "region": "Europe",
+      "measurements": {
+        "traceroute4": 31579851,
+        "ping4": 31579852,
+        "traceroute6": 31579854,
+        "ping6": 31579855
+      }
+    },
+    {
+      "id": 3679,
+      "probe": 7307,
+      "city": "Feira de Santana",
+      "country": "BR",
+      "fqdn": "br-fec-as264479.anchors.atlas.ripe.net",
+      "ip_v4": "138.117.32.11",
+      "ip_v6": "2804:203c:0:5::11",
+      "as_v4": 264479,
+      "as_v6": 264479,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -38.9739082,
+          -12.2397797
+        ]
+      },
+      "region": "South America",
+      "measurements": {
+        "traceroute4": 66196983,
+        "ping4": 66196984,
+        "traceroute6": 66196987,
+        "ping6": 66196988
+      }
+    },
+    {
+      "id": 4250,
+      "probe": 7540,
+      "city": "Cape Town",
+      "country": "ZA",
+      "fqdn": "za-cpt-as213481.anchors.atlas.ripe.net",
+      "ip_v4": "102.205.240.6",
+      "ip_v6": "2c0f:fc78:fee0:29a::beef:cafe",
+      "as_v4": 213481,
+      "as_v6": 213481,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          18.4778788,
+          -34.0374914
+        ]
+      },
+      "region": "Africa",
+      "measurements": {
+        "traceroute4": 105131137,
+        "ping4": 105131138,
+        "traceroute6": 105131142,
+        "ping6": 105131143
+      }
+    },
+    {
+      "id": 2497,
+      "probe": 6996,
+      "city": "Singapore",
+      "country": "SG",
+      "fqdn": "sg-sin-as12008.anchors.atlas.ripe.net",
+      "ip_v4": "203.119.15.254",
+      "ip_v6": "2610:a1:3070:252::254",
+      "as_v4": 12008,
+      "as_v6": 12008,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          103.7898406,
+          1.2951663
+        ]
+      },
+      "region": "Asia",
+      "measurements": {
+        "traceroute4": 29779917,
+        "ping4": 29779918,
+        "traceroute6": 29779920,
+        "ping6": 29779921
+      }
+    },
+    {
+      "id": 2332,
+      "probe": 6849,
+      "city": "Brisbane",
+      "country": "AU",
+      "fqdn": "au-bne-as4608.anchors.atlas.ripe.net",
+      "ip_v4": "203.119.111.139",
+      "ip_v6": "2001:dd8:8:705::139",
+      "as_v4": 4608,
+      "as_v6": 4608,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          153.0296446,
+          -27.4655235
+        ]
+      },
+      "region": "Oceania",
+      "measurements": {
+        "traceroute4": 26858347,
+        "ping4": 26858348,
+        "traceroute6": 26858350,
+        "ping6": 26858351
+      }
+    },
+    {
+      "id": 2825,
+      "probe": 7047,
+      "city": "Dubai",
+      "country": "AE",
+      "fqdn": "ae-dxb-as15412-client.anchors.atlas.ripe.net",
+      "ip_v4": "80.77.4.60",
+      "ip_v6": "2001:1a00:acca:130d::4",
+      "as_v4": 15412,
+      "as_v6": 15412,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          55.1868599,
+          25.0264601
+        ]
+      },
+      "region": "Middle East",
+      "measurements": {
+        "traceroute4": 34466561,
+        "ping4": 34466562,
+        "traceroute6": 34466564,
+        "ping6": 34466565
+      }
+    }
+  ],
+  "pairs": [
+    {
+      "id": "6585-7022-v4",
+      "source_probe": 6585,
+      "target_probe": 7022,
+      "family": 4,
+      "measurement_id": 31579852,
+      "trace_measurement_id": 31579851
+    },
+    {
+      "id": "6585-7022-v6",
+      "source_probe": 6585,
+      "target_probe": 7022,
+      "family": 6,
+      "measurement_id": 31579855,
+      "trace_measurement_id": 31579854
+    },
+    {
+      "id": "7022-6585-v4",
+      "source_probe": 7022,
+      "target_probe": 6585,
+      "family": 4,
+      "measurement_id": 22453852,
+      "trace_measurement_id": 22453851
+    },
+    {
+      "id": "7022-6585-v6",
+      "source_probe": 7022,
+      "target_probe": 6585,
+      "family": 6,
+      "measurement_id": 22453855,
+      "trace_measurement_id": 22453854
+    },
+    {
+      "id": "7022-7307-v4",
+      "source_probe": 7022,
+      "target_probe": 7307,
+      "family": 4,
+      "measurement_id": 66196984,
+      "trace_measurement_id": 66196983
+    },
+    {
+      "id": "7022-7307-v6",
+      "source_probe": 7022,
+      "target_probe": 7307,
+      "family": 6,
+      "measurement_id": 66196988,
+      "trace_measurement_id": 66196987
+    },
+    {
+      "id": "7307-7022-v4",
+      "source_probe": 7307,
+      "target_probe": 7022,
+      "family": 4,
+      "measurement_id": 31579852,
+      "trace_measurement_id": 31579851
+    },
+    {
+      "id": "7307-7022-v6",
+      "source_probe": 7307,
+      "target_probe": 7022,
+      "family": 6,
+      "measurement_id": 31579855,
+      "trace_measurement_id": 31579854
+    },
+    {
+      "id": "7307-7540-v4",
+      "source_probe": 7307,
+      "target_probe": 7540,
+      "family": 4,
+      "measurement_id": 105131138,
+      "trace_measurement_id": 105131137
+    },
+    {
+      "id": "7307-7540-v6",
+      "source_probe": 7307,
+      "target_probe": 7540,
+      "family": 6,
+      "measurement_id": 105131143,
+      "trace_measurement_id": 105131142
+    },
+    {
+      "id": "7540-7307-v4",
+      "source_probe": 7540,
+      "target_probe": 7307,
+      "family": 4,
+      "measurement_id": 66196984,
+      "trace_measurement_id": 66196983
+    },
+    {
+      "id": "7540-7307-v6",
+      "source_probe": 7540,
+      "target_probe": 7307,
+      "family": 6,
+      "measurement_id": 66196988,
+      "trace_measurement_id": 66196987
+    },
+    {
+      "id": "7540-6996-v4",
+      "source_probe": 7540,
+      "target_probe": 6996,
+      "family": 4,
+      "measurement_id": 29779918,
+      "trace_measurement_id": 29779917
+    },
+    {
+      "id": "7540-6996-v6",
+      "source_probe": 7540,
+      "target_probe": 6996,
+      "family": 6,
+      "measurement_id": 29779921,
+      "trace_measurement_id": 29779920
+    },
+    {
+      "id": "6996-7540-v4",
+      "source_probe": 6996,
+      "target_probe": 7540,
+      "family": 4,
+      "measurement_id": 105131138,
+      "trace_measurement_id": 105131137
+    },
+    {
+      "id": "6996-7540-v6",
+      "source_probe": 6996,
+      "target_probe": 7540,
+      "family": 6,
+      "measurement_id": 105131143,
+      "trace_measurement_id": 105131142
+    },
+    {
+      "id": "6996-6849-v4",
+      "source_probe": 6996,
+      "target_probe": 6849,
+      "family": 4,
+      "measurement_id": 26858348,
+      "trace_measurement_id": 26858347
+    },
+    {
+      "id": "6996-6849-v6",
+      "source_probe": 6996,
+      "target_probe": 6849,
+      "family": 6,
+      "measurement_id": 26858351,
+      "trace_measurement_id": 26858350
+    },
+    {
+      "id": "6849-6996-v4",
+      "source_probe": 6849,
+      "target_probe": 6996,
+      "family": 4,
+      "measurement_id": 29779918,
+      "trace_measurement_id": 29779917
+    },
+    {
+      "id": "6849-6996-v6",
+      "source_probe": 6849,
+      "target_probe": 6996,
+      "family": 6,
+      "measurement_id": 29779921,
+      "trace_measurement_id": 29779920
+    },
+    {
+      "id": "6849-7047-v4",
+      "source_probe": 6849,
+      "target_probe": 7047,
+      "family": 4,
+      "measurement_id": 34466562,
+      "trace_measurement_id": 34466561
+    },
+    {
+      "id": "6849-7047-v6",
+      "source_probe": 6849,
+      "target_probe": 7047,
+      "family": 6,
+      "measurement_id": 34466565,
+      "trace_measurement_id": 34466564
+    },
+    {
+      "id": "7047-6849-v4",
+      "source_probe": 7047,
+      "target_probe": 6849,
+      "family": 4,
+      "measurement_id": 26858348,
+      "trace_measurement_id": 26858347
+    },
+    {
+      "id": "7047-6849-v6",
+      "source_probe": 7047,
+      "target_probe": 6849,
+      "family": 6,
+      "measurement_id": 26858351,
+      "trace_measurement_id": 26858350
+    },
+    {
+      "id": "7047-6585-v4",
+      "source_probe": 7047,
+      "target_probe": 6585,
+      "family": 4,
+      "measurement_id": 22453852,
+      "trace_measurement_id": 22453851
+    },
+    {
+      "id": "7047-6585-v6",
+      "source_probe": 7047,
+      "target_probe": 6585,
+      "family": 6,
+      "measurement_id": 22453855,
+      "trace_measurement_id": 22453854
+    },
+    {
+      "id": "6585-7047-v4",
+      "source_probe": 6585,
+      "target_probe": 7047,
+      "family": 4,
+      "measurement_id": 34466562,
+      "trace_measurement_id": 34466561
+    },
+    {
+      "id": "6585-7047-v6",
+      "source_probe": 6585,
+      "target_probe": 7047,
+      "family": 6,
+      "measurement_id": 34466565,
+      "trace_measurement_id": 34466564
+    }
+  ]
+}

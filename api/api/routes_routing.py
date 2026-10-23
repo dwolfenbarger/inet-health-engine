@@ -31,7 +31,7 @@ async def read_observers(pool):
         result.append({'id':row['id'],'source':row['source'],'collector':row['collector'],
           'peer_ip':str(row['peer_ip']),'peer_asn':row['peer_asn'],'mode':row['mode'],
           'city':meta.get('city'),'region':meta.get('region'),
-          'lat':GEO.get(row['collector'],(0,0))[0],'lon':GEO.get(row['collector'],(0,0))[1],
+          'lat':meta.get('lat',GEO.get(row['collector'],(0,0))[0]),'lon':meta.get('lon',GEO.get(row['collector'],(0,0))[1]),
           'epoch':row['epoch'],'generation':str(row['generation']),
           'continuity':quality(row,row['pending_gaps'],now),'stream_state':row['stream_state'],'peer_state':row['peer_state'],
           'baseline_state':row['baseline_state'],'snapshot_at':row['baseline_at'],

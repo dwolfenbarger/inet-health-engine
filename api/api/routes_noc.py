@@ -17,6 +17,7 @@ COLLECTORS = {
     "rrc14": {"city": "Palo Alto", "lat": 37.44, "lon": -122.14},
     "rrc16": {"city": "Miami", "lat": 25.76, "lon": -80.19},
     "rrc21": {"city": "Paris", "lat": 48.86, "lon": 2.35},
+    "rrc15": {"city":"Sao Paulo","lat":-23.55,"lon":-46.63},
     "rrc23": {"city":"Singapore","lat":1.35,"lon":103.82},
     "route-views.kixp": {"city":"Nairobi","lat":-1.29,"lon":36.82},
 }
@@ -165,6 +166,7 @@ SOURCE_CATALOG = [
     ('ris-continuous','RIS selected continuous observer','Routing / maintained RIB','RIS; overlaps the sampled RIS source','https://ris-live.ripe.net/',180),
     ('rpki-local','Local RPKI validator','Origin authorization','RIR signed ROAs','https://routinator.docs.nlnetlabs.nl/',1200),
     ('atlas','RIPE Atlas','Reachability / latency / DNS','Atlas probes','https://atlas.ripe.net/',1200),
+    ('atlas-mesh','RIPE Atlas anchor mesh','Measured path baselines','Atlas probes; shared lineage with K-root built-ins','https://atlas.ripe.net/',1200),
     ('ioda','IODA','Outage candidates','RIS + RouteViews / active probing / telescope','https://ioda.inetintel.cc.gatech.edu/',1200),
     ('routeviews','RouteViews','Routing','RouteViews (some peers overlap RIS)','https://www.routeviews.org/',1200),
     ('radar','Cloudflare Radar','Traffic / provider events','Cloudflare perspective; routing may overlap collectors','https://radar.cloudflare.com/',1200),
@@ -253,3 +255,6 @@ async def evidence(source:str,asn:int|None=Query(None,ge=1,le=4294967295),
 
 from api.routes_routing import router as routing_router
 router.include_router(routing_router)
+
+from api.routes_coverage import router as coverage_router
+router.include_router(coverage_router)
