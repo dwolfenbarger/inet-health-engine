@@ -1,5 +1,5 @@
 # INET Health: Global NOC product and UI/UX roadmap
-Version: 1.4 | Updated: 2026-10-23 | Prepared by OpenAI Codex
+Version: 1.5 | Updated: 2026-10-23 | Prepared by OpenAI Codex
 
 ## Charter and planning status
 
@@ -244,7 +244,7 @@ Use small reviewed vertical slices through DEV1 -> UAT -> separately approved PR
 
 ## Twelve-month history and analysis
 
-The current budget-constrained proposal is [RETENTION-150G-350G-PLAN.md](RETENTION-150G-350G-PLAN.md), version 2.1. David set 150 GiB of container storage plus 350 GiB of attached NAS. This supersedes the earlier full-detail annual retention policy and multi-terabyte estimate. Current containers remain 200 GiB PROD/100 GiB UAT and no NAS mount was observed; this document neither shrinks filesystems nor attaches storage.
+The current budget-constrained proposal is [RETENTION-150G-350G-PLAN.md](RETENTION-150G-350G-PLAN.md), version 2.2. David set 150 GiB of container storage plus 350 GiB of attached NAS. This supersedes the earlier full-detail annual retention policy and multi-terabyte estimate. Current containers remain 200 GiB PROD/100 GiB UAT and no NAS mount was observed; this document neither shrinks filesystems nor attaches storage.
 
 Target: twelve months of trends, incident history, selected evidence and periodic checkpoint comparisons. Routine raw/normalized detail is approximately 24 hours local and initially 72 hours on NAS, targeting seven days only after compression/burst profiling. Global/regional hourly trends and daily ASN summaries span twelve months; hourly ASN history spans 90 days, with a bounded watchlist cohort retained hourly for the year. Older arbitrary route replay and full new-detector reanalysis are unavailable after routine raw expiry unless their evidence was selected and retained.
 
@@ -254,7 +254,7 @@ Execute fixed-budget phases 0–2 first: profile/preserve and qualify NAS/backup
 
 ## Immediate next work
 
-1. Execute the 150/350-GiB plan Phase 0 and a non-destructive archive/rollup pilot: measure formats/compression/checkpoints, establish NAS/backup placement and preserve current data.
+1. Complete the fixed-budget growth/format/checkpoint study and annual cardinality forecast. Atomic provider history and observed-cohort hourly/daily summaries are now in a bounded UAT pilot; qualify ongoing backup coverage and quota. See [RETAINED-EVIDENCE-20261023.md](RETAINED-EVIDENCE-20261023.md).
 2. Implement verified archival/protection and safe local expiry, resume continuous RIS receivers within the local/NAS budgets, and repair the recorded interruption before expanding ingestion.
 3. Add periodic independent RIB reconciliation, database-failure/restart soak and serving concurrency limits.
 4. Expand active-measurement endpoint/network diversity and build evidence-linked incident correlation with persistence, contrary evidence and source-lineage rules.
@@ -269,3 +269,7 @@ These references informed capability boundaries; they are not claims of integrat
 - BMP, RFC7854: https://datatracker.ietf.org/doc/html/rfc7854
 - RIPE Atlas measurement definitions: https://atlas.ripe.net/docs/apis/rest-api-manual/measurements/creating-measurements/definitions/
 - Globalping supported measurement types: https://github.com/jsdelivr/globalping/blob/master/public/v1/spec.yaml
+
+## Provider history qualification — 2026-10-23
+
+The additive UAT capture retains Atlas/mesh/IODA revisions and collection cycles in the same transaction as latest evidence. Mesh samples are deduplicated across overlapping fetch windows; corrections are new versions. The first 728 cohort summaries are verified on NAS. Capture is finite and bounded, with explicit gaps at limits; summaries state unknown expected coverage. No global score, complete historical feed, annual capacity qualification, historical UI/API, journal expiry or receiver restart is implied. Full archive tooling remains development-only. Production application and native API/worker/frontend are unchanged.

@@ -1,6 +1,6 @@
 # Retention and analysis within 150 GiB local + 350 GiB NAS
 
-Version 2.1 | 2026-10-23 | Prepared by OpenAI Codex
+Version 2.2 | 2026-10-23 | Prepared by OpenAI Codex
 
 ## Goal and changed scope
 
@@ -142,3 +142,11 @@ The next implementation slice is the Phase 0 fixed-budget profile and a non-dest
 The development-only pilot preserved and verified all 1,828,156 stopped journal records on NAS: 1,553,458,889 serialized bytes became 117,921,645 compressed bytes (13.174x). A separate explicitly sampled profile covers legacy BGP, maintained routes and source evidence. This does not establish annual capacity or complete all-source retention. The hourly 72-hour size study has started; a separate finite UAT safety guard pauses future Celery beat scheduling below 30 GiB free without stopping workers or deleting data. The receiver first-stop cause is fixed, but the receiver remains paused under its unchanged cap.
 
 See [RETENTION-PILOT-20261023.md](RETENTION-PILOT-20261023.md) for exact evidence, source roles, hashes, paths and backup/quota gaps. NAS protection/restore and safe expiry are still unqualified; pilot manifests explicitly prohibit expiry. Production and container sizes remain unchanged.
+
+## Evidence capture and summary qualification — 2026-10-23
+
+A bounded UAT qualification now preserves provider revisions atomically with latest-evidence writes. Atlas mesh samples are deduplicated by direction and observation time; overlapping 25-hour windows are not copied repeatedly. Built-in Atlas and IODA changes and collection cycles have the same capture hook. RPKI bulk snapshots, legacy BGP and maintained-route history are outside this new provider pilot. Built-in Atlas still polls provider latest results, so intermediate measurements that were never fetched remain unavailable.
+
+The 72-hour capture policy ends October 26 at 23:26:53 UTC and caps accounted serialized content at 512 MiB / two million versions. This byte allowance includes an accounting overhead but is not an exact PostgreSQL disk quota; relation size, WAL and root reserve still require monitoring. Limits record explicit gaps while latest-evidence collection continues. Hourly/daily observed-cohort summaries are stored separately with correction versions, sample/packet counts, unknown coverage, and a processing watermark. No age expiry is enabled.
+
+The first seed produced 700 hourly plus 28 daily mesh summaries; 728 summary records serialized to 681,554 bytes and compressed to 20,284 bytes, verified locally and on NAS. This is a small seed result, not a twelve-month cardinality forecast. Details, independent-backup proof status and outstanding gates are maintained in [RETAINED-EVIDENCE-20261023.md](RETAINED-EVIDENCE-20261023.md).

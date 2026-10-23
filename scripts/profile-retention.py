@@ -17,7 +17,7 @@ def setup():
 
 def normalize(row):
     result=dict(row)
-    for key in ['payload','attrs','path','detail','audit','raw_data']:
+    for key in ['payload','attrs','path','detail','audit','raw_data','document']:
         if isinstance(result.get(key),str):
             try:result[key]=json.loads(result[key])
             except json.JSONDecodeError:pass
@@ -56,7 +56,7 @@ async def export(conn,mode):
     BASE.mkdir(parents=True,exist_ok=True);runs=BASE/'runs';runs.mkdir(exist_ok=True)
     name=datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')+'-'+uuid.uuid4().hex[:8]
     b=Bundle(runs/name,max_raw=4*1024**3 if mode=='full-journal' else 128*1024**2)
-    metadata={'source_host':socket.gethostname(),'mode':mode,'sample_only':mode!='full-journal',
+    metadata={'source_host':socket.gethostname(),'mode':mode,'sample_only':mode=='sample',
         'scope':'Development evidence preservation/profile; no deletion eligibility',
         'selected_data':[]}
     try:
@@ -72,6 +72,14 @@ async def export(conn,mode):
                     record=normalize(row);coverage.add(record);b.add('routing_messages',record)
                 metadata['journal_expected']=expected;metadata['journal_actual']=coverage.finish()
                 metadata['selected_data'].append({'table':'routing_messages','selection':'Every row in the read-only repeatable-read snapshot'})
+            elif mode=='retained-summary':
+                summary_count=0
+                async for row in conn.cursor('SELECT * FROM inet_retention.summaries ORDER BY grain,bucket,source,family,cohort LIMIT 100001',prefetch=100):
+                    if summary_count>=100000:raise RuntimeError('Summary object count budget')
+                    b.add('retained_summaries',normalize(row));summary_count+=1
+                metadata['selected_data'].append({'table':'inet_retention.summaries','selection':'All currently retained observed-cohort summaries; no raw data or completeness claim'})
+                metadata['capture_policy']=dict(await conn.fetchrow('SELECT * FROM inet_retention.policy WHERE id'))
+                metadata['capture_gaps']=[dict(row) for row in await conn.fetch('SELECT * FROM inet_retention.gaps')]
             else:
                 selections=[('bgp_updates','SELECT * FROM bgp_updates TABLESAMPLE SYSTEM (0.05) REPEATABLE (23) LIMIT 10000'),
                     ('routing_routes','SELECT * FROM routing_routes TABLESAMPLE SYSTEM (0.1) REPEATABLE (23) LIMIT 10000')]
@@ -90,7 +98,7 @@ async def export(conn,mode):
         b.abort();raise
 
 async def main():
-    parser=argparse.ArgumentParser();parser.add_argument('mode',choices=['measure','study','full-journal','sample'])
+    parser=argparse.ArgumentParser();parser.add_argument('mode',choices=['measure','study','full-journal','sample','retained-summary'])
     parser.add_argument('--source',default='/tmp/inet-retention-candidate');args=parser.parse_args()
     sys.path.insert(0,str(Path(args.source)/'collectors'));setup()
     import asyncpg

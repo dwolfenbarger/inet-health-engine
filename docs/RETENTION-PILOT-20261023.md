@@ -64,3 +64,7 @@ The 2-GiB receiver guard, 20-GiB receiver/MRT free-space guard and observer budg
 - No production UI route, public bulk-archive endpoint, history expiry or automatic resumption of RIS has been enabled. Twelve-month production analysis remains the target, not a feature completed by this pilot.
 
 Next: finish representative growth/format profiling, implement append-only measurement history and retained rollups/incident proof, verify protection/restore and safe recovery boundaries, then qualify local expiry and continuous-receiver resumption within the fixed budget.
+
+## Subsequent qualification — 23:33 UTC
+
+The next increment added bounded atomic provider history and retained hourly/daily cohort summaries in UAT. It also completed one separate-PBS project backup and full restored-byte verification, covering the journal, mixed sample and 728 summaries. Ongoing backup coverage and quota are still unverified; expiry remains disabled and RIS remains paused. See [RETAINED-EVIDENCE-20261023.md](RETAINED-EVIDENCE-20261023.md) for current evidence, finite limits and remaining gates. Earlier sections document the pilot state at their original check times.
