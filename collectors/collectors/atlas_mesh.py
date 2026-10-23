@@ -6,7 +6,7 @@ from ipaddress import ip_address
 import asyncpg,httpx
 from collectors.db import get_pg_pool,close_pg_pool
 from collectors.config import settings
-from collectors.source_evidence import save_cycle,source_failure
+from collectors.source_evidence import save_cycle
 UTC=timezone.utc
 SOURCE='atlas-mesh'
 BASE='https://atlas.ripe.net/api/v2/'
@@ -67,6 +67,7 @@ def check_measurement(meta,pair,target):
         raise ValueError('Measurement metadata differs')
     if not {'anchoring','mesh'}<=set(meta.get('tags',[])) or meta.get('status',{}).get('id')!=2:raise ValueError('Not an ongoing public anchoring mesh')
     if ip_address(meta['target_ip'])!=ip_address(target[f"ip_v{pair['family']}"]):raise ValueError('Target address changed')
+    if int(meta.get('target_asn') or 0)!=target[f"as_v{pair['family']}"]:raise ValueError('Target ASN metadata differs')
 
 async def get_json(client,url,params=None,max_bytes=2*1024**2):
     async with client.stream('GET',url,params=params) as response:

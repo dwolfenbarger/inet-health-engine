@@ -24,6 +24,9 @@ class MeshTests(unittest.TestCase):
   p={'observed_at':(self.now-timedelta(hours=2)).isoformat(),'state':'measurement_change_candidate'}
   self.assertEqual(mesh_state(p,self.now),'stale');self.assertEqual(mesh_state(p,self.now,True),'collection_error')
  def test_metadata_requires_actual_mesh_target(self):
-  meta={'id':12,'af':4,'type':'ping','is_public':True,'tags':['anchoring','mesh'],'status':{'id':2},'target_ip':'192.0.2.1'}
-  check_measurement(meta,self.pair,{'ip_v4':'192.0.2.1'})
-  with self.assertRaises(ValueError):check_measurement(meta,self.pair,{'ip_v4':'192.0.2.2'})
+  meta={'id':12,'af':4,'type':'ping','is_public':True,'tags':['anchoring','mesh'],'status':{'id':2},'target_ip':'192.0.2.1','target_asn':64500}
+  check_measurement(meta,self.pair,{'ip_v4':'192.0.2.1','as_v4':64500})
+  with self.assertRaises(ValueError):check_measurement(meta,self.pair,{'ip_v4':'192.0.2.2','as_v4':64500})
+
+ def test_probe_disconnect_is_measurement_unavailable(self):
+  self.assertEqual(mesh_state({'observed_at':self.now.isoformat(),'state':'observations_available','source_probe_status':{'id':2}},self.now),'probe_disconnected')
