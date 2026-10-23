@@ -11,7 +11,7 @@ This document fulfills the requested phased plan. Scope direction is accepted; p
 
 Production is the source-evidence release (PR #6/master19c2923). The expanded UAT canary in draft PR #7 adds maintained peer/session route views, MRT recovery, IP longest-prefix lookup, five configured routing observers, a regional coverage-gap panel and 28 public Atlas mesh directions across seven anchors. Live mesh collection, target/probe identity checks, 25-hour latency/loss baselines and qualified change candidates are implemented; this is not the full Phase4/5 incident engine.
 
-New York and Paris now have audited 08:00 UTC snapshots and completed archive catch-up. Singapore and Nairobi retain audited baselines. Sao Paulo retains live changes but remains snapshot-required after two finalization timeouts; the current indexed, idempotent retry is still being qualified. There is no global health score or defensible global coverage percentage. Independent RIB reconciliation, both address families per region, more diverse measurement endpoints, storage/retention policy, sustained failure testing, rendered UX review and public release controls remain open.
+New York and Paris now have audited 08:00 UTC snapshots and completed archive catch-up. Singapore and Nairobi retain audited baselines. Sao Paulo completed its audited 1,091,211-prefix snapshot after two finalization timeouts; its strict catch-up is waiting for archive publication. All five now have audited baselines. There is no global health score or defensible global coverage percentage. Independent RIB reconciliation, both address families per region, more diverse measurement endpoints, storage/retention policy, sustained failure testing, rendered UX review and public release controls remain open.
 
 Exact application commits, deployment artifacts, source inventories, tests and current bootstrap evidence: docs/CONTINUOUS-ROUTING-20261023.md and docs/GLOBAL-COVERAGE-20261023.md. Earlier starting-point findings below are historical, not the current production state.
 
@@ -244,7 +244,7 @@ Use small reviewed vertical slices through DEV1 -> UAT -> separately approved PR
 
 ## Immediate next work
 
-1. Resolve Sao Paulo snapshot finalization, verify replay and sustained continuity, then expand address-family/geographic diversity in measured batches.
+1. Verify Sao Paulo archive catch-up and sustained continuity, then expand address-family/geographic diversity in measured batches.
 2. Measure sustained journal/history growth and implement a recoverable retention/archival policy before broad ingestion.
 3. Add periodic independent RIB reconciliation, database-failure/restart soak and serving concurrency limits.
 4. Expand active-measurement endpoint/network diversity and build evidence-linked incident correlation with persistence, contrary evidence and source-lineage rules.

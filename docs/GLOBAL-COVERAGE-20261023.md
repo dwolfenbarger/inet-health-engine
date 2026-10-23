@@ -18,21 +18,23 @@ Initial source checks refused eight directions involving an invalid Singapore an
 
 ## Routing status
 
-At 09:00 UTC, four observers had audited baselines and completed recorded catch-up; the fifth remained explicitly snapshot-required:
+At 09:15 UTC, all five observers had audited baselines. Four had completed recorded catch-up; São Paulo was waiting for archive publication/replay:
 
 | Collector location | Selected peer | AF | Audited baseline | Current qualification |
 |---|---|---|---:|---|
 | Singapore / RIS rrc23 | AS133210 / 2001:de8:4::13:3210:1 | IPv6 | 261,911 | Reconstructed; live changes |
-| Nairobi / RouteViews KIXP | AS30844 / 196.223.21.44 | IPv4 | 1,073,233 | Reconstructed archive; evidence through 08:30 UTC at this check |
+| Nairobi / RouteViews KIXP | AS30844 / 196.223.21.44 | IPv4 | 1,073,233 | Reconstructed archive; evidence through 09:00 UTC at this check |
 | New York / RIS rrc11 | AS2497 / 198.32.160.42 | IPv4 | 1,074,569 | Audited 08:00 UTC RIB and catch-up complete; live changes |
 | Paris / RIS rrc21 | AS15547 / 2001:7f8:54::156 | IPv6 | 256,233 | Audited 08:00 UTC RIB and catch-up complete; live changes |
-| São Paulo / RIS rrc15 | AS28624 / 187.16.216.103 | IPv4 | Incomplete | Live changes retained; RIB finalization retry in progress |
+| São Paulo / RIS rrc15 | AS28624 / 187.16.216.103 | IPv4 | 1,091,211 | Audited 08:00 UTC RIB; snapshot-to-checkpoint replay pending |
 
 Collector cities describe observation locations, not route geography or physical traffic. These are selected peers, not every collector peer. All three new streams started before their 08:00 UTC snapshots. `bootstrap_not_before` avoids importing an older table and unnecessary replay. Public snapshots appeared approximately 08:14 UTC. Independent compressed-integrity/record-framing audits and selected-peer counts must match the decoded RIB before completion is recorded.
 
 A completed snapshot records older live entries absent from that RIB as snapshot-absence evidence, preserving newer live changes without inventing BGP withdrawals. An idempotent generation-specific `SnapshotCatchup` interval then requires contiguous archives from the RIB timestamp to the captured live checkpoint, including after session resets. The view remains awaiting replay until every interval is applied. An unknown-start gap superseded by a later audited snapshot is not given an inverted start/end time. This is initial handoff reconciliation; periodic independent RIB reconciliation is still needed.
 
-São Paulo finalization exceeded the database pool's 30-second command timeout at 08:39 and 08:59 UTC. Previously committed batches remained intact, but no completed baseline was published. A concurrent `(observer,event_at)` index is valid; retry writes now skip equal/older route tuples instead of physically rewriting them. The latest recovery process started at 09:00 UTC. This is an active qualification issue, not a resolved performance claim. A standard concurrent VACUUM/ANALYZE started at approximately 09:10 UTC to reclaim obsolete MVCC row versions from prior retries; this preserves logical records/history. Full-table bootstrap also delays other archive observers while parsing; fairer scheduling remains relevant.
+São Paulo finalization exceeded the database pool's 30-second command timeout at 08:39 and 08:59 UTC. Previously committed batches remained intact, but no completed baseline was published prematurely. A concurrent `(observer,event_at)` index is valid, and retry writes skip equal/older route tuples instead of physically rewriting them. A standard concurrent VACUUM/ANALYZE reclaimed obsolete MVCC versions from prior retries without deleting logical records/history; it completed successfully at 09:13:02 UTC.
+
+The next retry completed the independently audited 1,091,211-prefix RIB at 09:12:52 UTC. At 09:14:44 UTC the remaining catch-up was correctly waiting for the provider's 09:10 update archive; live checkpoints continued advancing. The source's publication delay is distinct from the resolved finalization failures. Automatic strict replay continues as archives arrive. Full-table bootstrap delays other archive observers while parsing; fairer scheduling and sustained query/ingest capacity remain relevant.
 
 ## Runtime and recovery
 
@@ -52,13 +54,13 @@ Windows Git archive defaults can export CRLF despite core.autocrlf=false. Linux 
 
 44 Python tests, six existing preview-context tests, frontend build and targeted lint passed. Actual PostgreSQL regressions verify atomic failure/deduplication, unsigned ASNs, peer isolation, session invalidation, withdrawal ordering, longest-prefix fallback, snapshot absences, catch-up boundaries and physical tuple stability for unchanged replay. All test records were rolled back. Live nginx/API checks passed for seven regions, 28 directions, 14 IPv6 directions, endpoint ASN filtering, optional unknown target ASNs, bounded raw evidence and invalid inputs. Served HTML references the expected new assets. Rendered browser/accessibility review is still pending; no certificate warning was bypassed.
 
-A 32-request LAN smoke check at concurrency four completed without errors during bootstrap: median 0.154s, p95 3.534s, maximum 4.022s. This is not sustained public-capacity testing or a passed subsecond SLO.
+A 32-request LAN smoke check at concurrency four completed without errors during bootstrap: median 0.154s, p95 3.534s, maximum 4.022s. A repeat after cleanup/snapshot completion also had no errors: median 0.152s, p95 4.218s, maximum 5.680s. Latency did not demonstrate an improvement, and the tail remains a serving-capacity concern. These are small warm smoke checks, not sustained public-load testing or a passed subsecond SLO.
 
-At 09:00 UTC: root free 70.55 GiB; routing relation including indexes 5.07 GB; raw journal 290 MB; source evidence 782 MB; legacy sampled BGP history 11.71 GB. Relation growth includes retry write amplification and indexes, not only unique routes. Existing 2-GiB journal and 20-GiB root-free guards pause ingestion. Retention/archival is not implemented; no historical data was deleted. Recoverable retention, throughput and service/query budgets must precede broader sustained ingestion.
+At 09:15 UTC: root free 70.52 GiB; routing relation including indexes 5.08 GB; raw journal 337 MB; source evidence 793 MB; legacy sampled BGP history 11.87 GB. Relation growth includes retry write amplification and indexes, not only unique routes. Existing 2-GiB journal and 20-GiB root-free guards pause ingestion. Retention/archival is not implemented; no historical data was deleted. Recoverable retention, throughput and service/query budgets must precede broader sustained ingestion.
 
 ## Remaining gates and next increment
 
-1. Resolve São Paulo finalization and verify all snapshot-to-checkpoint intervals; qualify sustained continuity across restarts, database failures and backpressure.
+1. Let São Paulo catch-up finish as the remaining source archive is published, verify every interval, and qualify sustained continuity across restarts, database failures and backpressure.
 2. Implement recoverable retention/archival and measure ingestion/serving contention before increasing observers.
 3. Add periodic independent RIB reconciliation, both families in target regions and routing viewpoints in Oceania/Middle East. Provider per-peer hourly MRT prototypes may reduce bootstrap cost but have not been integrated or availability-qualified.
 4. Expand performance endpoint/network diversity, traceroute comparison, persistent incident lifecycle and independent routing/performance corroboration.
