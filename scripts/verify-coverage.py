@@ -32,6 +32,12 @@ async def main():
   pair=available[0];r=await client.get(prefix+'/mesh/'+pair['pair']['id']);assert r.status_code==200,r.text
   assert r.json()['evidence']['raw_stats']['probe_id']==pair['source']['probe']
   assert len((await client.get(prefix+'/mesh?family=6')).json()['directions'])==14
+  unknown=[d for d in available if d.get('target_asn') is None and d['source'][f"as_v{d['pair']['family']}"]!=d['target'][f"as_v{d['pair']['family']}"]]
+  if unknown:
+   d=unknown[0];anchor_asn=d['target'][f"as_v{d['pair']['family']}"]
+   result=(await client.get(prefix+f'/mesh?asn={anchor_asn}')).json()
+   assert d['pair']['id'] not in [p['pair']['id'] for p in result['directions']]
+  print('BASELINES',sum(bool(d.get('baseline_established')) for d in available),'UNKNOWN_TARGET_ASNS',len(unknown),flush=True)
   filtered=(await client.get(prefix+'/mesh?asn=4294967295')).json();assert filtered['directions']==[]
   assert (await client.get(prefix+'/mesh?family=9')).status_code==422
   assert (await client.get(prefix+'/mesh?asn=4294967296')).status_code==422

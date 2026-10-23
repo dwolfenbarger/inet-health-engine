@@ -80,6 +80,7 @@ async def main():
    await archive_batch(obs,observed['epoch'],observed['generation'],[(1,mrt_change(snap,obs,snapshot=now+timedelta(seconds=5)))],0,'snapshot')
    removed=await finalize_snapshot(c,obs['id'],observed['epoch'],observed['generation'],now+timedelta(seconds=5),'https://test/snapshot')
    assert removed>=1
+   assert await c.fetchval("SELECT EXISTS(SELECT 1 FROM routing_gaps WHERE observer=$1 AND reason='SnapshotCatchup' AND from_at=$2 AND until_at=$3)",obs['id'],now+timedelta(seconds=5),now+timedelta(seconds=6))
    assert not await c.fetchval("SELECT present FROM routing_routes WHERE observer=$1 AND prefix='1.0.0.0/8'",obs['id'])
    assert await c.fetchval("SELECT attrs->>'snapshot_absence' FROM routing_routes WHERE observer=$1 AND prefix='1.0.0.0/8'",obs['id'])=='true'
    for prefix in ['8.8.8.0/24','192.0.2.0/24']:

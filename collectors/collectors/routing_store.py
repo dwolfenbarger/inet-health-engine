@@ -105,4 +105,14 @@ async def finalize_snapshot(conn,observer,epoch,generation,at,url):
         evidence_id=$5||'#snapshot-absence:'||prefix::text
         WHERE observer=$1 AND epoch=$2 AND generation=$3 AND present AND event_at<$4''',
         observer,epoch,generation,at,url)
+    # A checkpoint later than the RIB must be covered by archives even after
+    # a session reset invalidated live entries from an earlier generation.
+    row=await conn.fetchrow('SELECT event_at,mode FROM routing_observers WHERE id=$1',observer)
+    if row['mode']=='ris-live' and row['event_at'] and row['event_at']>at:
+        gap_id=uuid.uuid5(uuid.NAMESPACE_URL,f'{observer}:{generation}:{at.isoformat()}:snapshot-catchup')
+        await conn.execute('''INSERT INTO routing_gaps(id,observer,from_at,until_at,reason,state)
+            VALUES($1,$2,$3,$4,'SnapshotCatchup','waiting_archive') ON CONFLICT(id) DO NOTHING''',
+            gap_id,observer,at,row['event_at'])
+        await conn.execute('''UPDATE routing_observers SET baseline_state='snapshot' WHERE id=$1
+            AND EXISTS(SELECT 1 FROM routing_gaps WHERE id=$2 AND state NOT IN ('repaired','snapshot_superseded'))''',observer,gap_id)
     return int(result.split()[-1])
