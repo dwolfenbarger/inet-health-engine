@@ -17,6 +17,8 @@ COLLECTORS = {
     "rrc14": {"city": "Palo Alto", "lat": 37.44, "lon": -122.14},
     "rrc16": {"city": "Miami", "lat": 25.76, "lon": -80.19},
     "rrc21": {"city": "Paris", "lat": 48.86, "lon": 2.35},
+    "rrc23": {"city":"Singapore","lat":1.35,"lon":103.82},
+    "route-views.kixp": {"city":"Nairobi","lat":-1.29,"lon":36.82},
 }
 CAP = 20000
 
@@ -41,7 +43,7 @@ def canonical_prefix(value):
 async def snapshot(
     minutes: int = Query(15, ge=1, le=60),
     family: Literal["all", "4", "6"] = "all",
-    collector: str = Query("all", max_length=10),
+    collector: str = Query("all", max_length=64),
     asn: int | None = Query(None, ge=1, le=4294967295),
     prefix: str | None = Query(None, max_length=49),
 ):
@@ -160,6 +162,7 @@ async def snapshot(
 # Source collection status is global metadata, independent of investigation filters.
 SOURCE_CATALOG = [
     ('ris','RIPE RIS Live','Routing','RIS','https://ris-live.ripe.net/',240),
+    ('ris-continuous','RIS selected continuous observer','Routing / maintained RIB','RIS; overlaps the sampled RIS source','https://ris-live.ripe.net/',180),
     ('rpki-local','Local RPKI validator','Origin authorization','RIR signed ROAs','https://routinator.docs.nlnetlabs.nl/',1200),
     ('atlas','RIPE Atlas','Reachability / latency / DNS','Atlas probes','https://atlas.ripe.net/',1200),
     ('ioda','IODA','Outage candidates','RIS + RouteViews / active probing / telescope','https://ioda.inetintel.cc.gatech.edu/',1200),
@@ -193,12 +196,26 @@ async def sources():
                 row={'state':'partial','last_attempt':None,'last_success':latest,
                      'last_observation':latest,'records':None,'error_code':None,
                      'detail':{'scope':'Five configured RIS collectors; bounded intermittent update sample',
-                               'limitations':['No complete RIB or continuous collection yet.']}}
+                               'limitations':['This sampled source has no complete RIB; selected continuous observers are reported separately.']}}
+            if key in ['ris-continuous','routeviews']:
+                from api.routes_routing import read_observers
+                views=[v for v in await read_observers(pool) if v['source']==key]
+                if views:
+                    last=max((v['committed_at'] for v in views if v['committed_at']),default=None)
+                    latest_event=max((v['event_at'] for v in views if v['event_at']),default=None)
+                    row={'state':'partial','last_attempt':last,'last_success':last,'last_observation':latest_event,
+                         'records':sum(v['updates'] if key=='ris-continuous' else v['snapshot_v4']+v['snapshot_v6'] for v in views),'error_code':None,
+                         'detail':{'scope':'Selected peer IP/session views', 'records_basis':'Committed prefix changes since registration' if key=='ris-continuous' else 'Prefixes in baseline snapshots; current counts can differ',
+                                   'observers':[{**v,'snapshot_at':str(v['snapshot_at']),'event_at':str(v['event_at']),
+                                     'received_at':str(v['received_at']),'committed_at':str(v['committed_at'])} for v in views],
+                                   'routing_endpoint':'/api/v1/noc/routing/routes?source='+key,
+                                   'limitations':['A reconstructed observer view is not proof of reachability or global coverage.',
+                                                  'RIS views share source lineage; they are not independent confirmations.']}}
             value={k:row.get(k) if row else None for k in ['last_attempt','last_success','last_observation','records','error_code']}
             detail=row.get('detail',{}) if row else {'scope':'No verified collection is available'}
             if isinstance(detail,str):detail=json.loads(detail)
             result.append({'id':key,'name':name,'role':role,'lineage':lineage,'url':url,
-                'state':source_state(row,now,threshold),'detail':detail,**value})
+                'state':('stale' if key in ['ris-continuous','routeviews'] and row and row['last_observation'] and (now-row['last_observation']).total_seconds()>threshold else source_state(row,now,threshold)),'detail':detail,**value})
         return {'as_of':now,'scope':'Global source collection status; counts are not filtered by the selected ASN or prefix',
                 'health_score':None,'sources':result}
     except Exception:
@@ -210,6 +227,14 @@ async def evidence(source:str,asn:int|None=Query(None,ge=1,le=4294967295),
                    family:Literal['all','4','6']='all',limit:int=Query(25,ge=1,le=100)):
     import json
     if source not in {r[0] for r in SOURCE_CATALOG}:raise HTTPException(404,'Unknown source')
+    if source in ['routeviews','ris-continuous']:
+        from api.routes_routing import routes
+        maintained=await routes(observer=None,source=source,collector='all',prefix=None,ip=None,
+                                asn=asn,family=family,include_withdrawn=False,limit=limit)
+        return {'source':source,'as_of':maintained['as_of'],'records':[
+            {'observed_at':r['time'],'asn':r['origin_asn'],'family':6 if ':' in r['prefix'] else 4,
+             'resource':r['prefix'],'payload':r} for r in maintained['routes']],
+            'observers':maintained['observers'],'scope':maintained['scope'],'health_score':None}
     try:
         pool=await get_pg_pool()
         rows=await pool.fetch('''SELECT observed_at,asn,family,resource,payload FROM source_evidence
@@ -225,3 +250,6 @@ async def evidence(source:str,asn:int|None=Query(None,ge=1,le=4294967295),
                 'scope':{'asn':asn,'family':family,'limit':limit},'health_score':None}
     except Exception:
         raise HTTPException(503,'Source evidence store unavailable') from None
+
+from api.routes_routing import router as routing_router
+router.include_router(routing_router)

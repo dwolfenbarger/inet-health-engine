@@ -13,6 +13,7 @@ from collectors.mrt_audit import audit
 
 UTC=timezone.utc
 class WaitingArchive(RuntimeError):pass
+class ReplayPending(WaitingArchive):pass
 
 
 def months(start,end):
@@ -142,7 +143,17 @@ async def import_file(observer,row,file,kind,cache):
     print('MRT_APPLIED',observer['id'],kind,file['at'].isoformat(),count,flush=True)
     return count,review
 
-async def recover(observer,cache):
+async def replay_files(observer,row,files,cache,stop=None,budget=4):
+    """Yield between observers; durable file identities make each pass resumable."""
+    pool=await get_pg_pool()
+    applied=set(await pool.fetchval("SELECT coalesce(array_agg(url),ARRAY[]::text[]) FROM routing_archives WHERE observer=$1 AND generation=$2",observer['id'],row['generation']))
+    pending=[f for f in files if f['url'] not in applied]
+    for file in pending[:budget]:
+        if stop and stop.is_set():raise ReplayPending('Graceful stop at committed archive boundary')
+        await import_file(observer,row,file,'updates',cache)
+    if len(pending)>budget:raise ReplayPending(f'{len(pending)-budget} archive files remain; yielding to other observers')
+
+async def recover(observer,cache,stop=None):
     await register(observer)
     pool=await get_pg_pool();now=datetime.now(UTC)
     row=dict(await pool.fetchrow('SELECT * FROM routing_observers WHERE id=$1',observer['id']))
@@ -163,7 +174,7 @@ async def recover(observer,cache):
         if files:
             # Replay requires every interval, even when later files are available.
             wanted=covering_files(files,start,files[-1]['at'],period)
-            for file in wanted:await import_file(observer,row,file,'updates',cache)
+            await replay_files(observer,row,wanted,cache,stop)
             through=wanted[-1]['until']
             await pool.execute("UPDATE routing_observers SET event_at=$2,committed_at=now(),stream_state='archive',baseline_state='reconstructed',error_code=NULL WHERE id=$1 AND epoch=$3",observer['id'],through,row['epoch'])
         elif cursor is None:
@@ -174,7 +185,7 @@ async def recover(observer,cache):
         if until>=start:
             files=await manifest(observer,'updates',start-timedelta(seconds=period),until+timedelta(seconds=period))
             wanted=covering_files(files,start,until,period)
-            for file in wanted:await import_file(observer,row,file,'updates',cache)
+            await replay_files(observer,row,wanted,cache,stop)
         # Lock the observer before declaring the replay complete. A new live peer
         # reset changes epoch/generation and prevents an obsolete completion.
         async with pool.acquire() as conn,conn.transaction():
@@ -196,12 +207,13 @@ async def publish_archive_status(observer):
         'as_of':row['event_at'].isoformat() if row['event_at'] else None,
         'routing_endpoint':'/api/v1/noc/routing/routes?source=routeviews',
         'limitations':['Archived observations have publication delay, not a real-time feed.',
-                      'One selected peer does not establish global health or independent corroboration.']}
+                      'One selected peer does not establish global health or independent corroboration.'],
+        'records_basis':'Decoded records in the most recently committed archive, not total routes'}
     await pool.execute('''INSERT INTO source_status(source,last_attempt,last_success,last_observation,state,records,detail)
-        VALUES('routeviews',now(),now(),$1,'partial',$2,$3::jsonb)
-        ON CONFLICT(source) DO UPDATE SET last_attempt=now(),last_success=now(),last_observation=excluded.last_observation,
+        VALUES('routeviews',now(),$4,$1,'partial',$2,$3::jsonb)
+        ON CONFLICT(source) DO UPDATE SET last_attempt=now(),last_success=excluded.last_success,last_observation=excluded.last_observation,
           state='partial',records=excluded.records,detail=excluded.detail,error_code=NULL''',
-        row['event_at'] or row['baseline_at'],latest['records'],json.dumps(detail))
+        row['event_at'] or row['baseline_at'],latest['records'],json.dumps(detail),latest['applied_at'])
 
 async def main(config,cache_dir,once=False):
     observers=json.loads(Path(config).read_text());cache=Path(cache_dir);cache.mkdir(parents=True,exist_ok=True)
@@ -212,7 +224,7 @@ async def main(config,cache_dir,once=False):
     try:
         while not stop.is_set():
             for observer in observers:
-                try:await recover(observer,cache)
+                try:await recover(observer,cache,stop)
                 except Exception as exc:
                     print('MRT_RECOVERY_PENDING',observer['id'],type(exc).__name__,str(exc)[:180],flush=True)
                     pool=await get_pg_pool()

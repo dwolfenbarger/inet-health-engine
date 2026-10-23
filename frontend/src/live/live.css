@@ -10,3 +10,10 @@
 .source-evidence-panel .source-error,.source-evidence-panel .source-stale,.source-alert {color:#f3a398}
 .source-evidence-panel .source-unavailable,.source-evidence-panel .source-unconfigured {color:#a5b4c4}
 .source-alert {padding:0 20px}
+
+.live-noc .live-banner.partial{background:#432f1d;border-color:#7b5732}
+.live-noc .live-banner.partial .status-dot{background:#e6c77a;box-shadow:none}
+.live-noc .maintained-coverage small{display:block;margin-top:6px;color:#b2c3ce;overflow-wrap:anywhere}
+.live-noc .maintained-coverage td{min-width:150px}
+.live-noc .maintained-coverage .panel-heading{gap:14px;flex-wrap:wrap}
+.live-noc select:disabled{opacity:.6;cursor:not-allowed}
