@@ -1,5 +1,8 @@
 # Twelve-month retention and analysis plan
 
+> **Superseded on 2026-10-23 by [the 150 GiB local + 350 GiB NAS plan](RETENTION-150G-350G-PLAN.md).** The current target is twelve months of analysis, incidents and selected evidence with shorter routine raw retention. The full-detail twelve-month policy and multi-terabyte allocation below are historical proposals, not the current operating target.
+
+
 Version 1.0 | 2026-10-23 | Prepared by OpenAI Codex
 
 ## Outcome and scope

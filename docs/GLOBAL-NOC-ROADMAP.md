@@ -1,5 +1,5 @@
 # INET Health: Global NOC product and UI/UX roadmap
-Version: 1.2 | Updated: 2026-10-23 | Prepared by OpenAI Codex
+Version: 1.3 | Updated: 2026-10-23 | Prepared by OpenAI Codex
 
 ## Charter and planning status
 
@@ -244,14 +244,18 @@ Use small reviewed vertical slices through DEV1 -> UAT -> separately approved PR
 
 ## Twelve-month history and analysis
 
-The proposed retention and execution plan is [RETENTION-AND-ANALYSIS-12-MONTH-PLAN.md](RETENTION-AND-ANALYSIS-12-MONTH-PLAN.md). Target: twelve calendar months of full captured observations and evidence, daily route checkpoints, searchable incidents and reproducible analysis. Proposed tiers:72-hour raw recovery buffer, seven-day indexed history, twelve-month compressed queryable detail and longer-lived analytical summaries within the same window. An independently recoverable second archive copy is included. Provisional budget:500GiB fast storage and8–12TiB usable per archive copy, subject to profiling; this is not a hardware allocation. No deletion, guard increase or production deployment is enabled by the plan.
+The current budget-constrained proposal is [RETENTION-150G-350G-PLAN.md](RETENTION-150G-350G-PLAN.md), version 2.0. David set 150 GiB of container storage plus 350 GiB of attached NAS. This supersedes the earlier full-detail annual retention policy and multi-terabyte estimate. Current containers remain 200 GiB PROD/100 GiB UAT and no NAS mount was observed; this document neither shrinks filesystems nor attaches storage.
 
-Execute retention phases0–2 first:measure/preserve, durable archive and history capture, then safe local expiry and receiver recovery. Historical UI/analysis and annual-volume recovery qualification follow. Retention applies to actual captured source scope, not complete global visibility; backfill availability remains source-specific.
+Target: twelve months of trends, incident history, selected evidence and periodic checkpoint comparisons. Routine raw/normalized detail is approximately 24 hours local and initially 72 hours on NAS, targeting seven days only after compression/burst profiling. Global/regional hourly trends and daily ASN summaries span twelve months; hourly ASN history spans 90 days, with a bounded watchlist cohort retained hourly for the year. Older arbitrary route replay and full new-detector reanalysis are unavailable after routine raw expiry unless their evidence was selected and retained.
+
+Allocation: local 20 GiB OS/application + 20 GiB current routes + 35 GiB recent detail + 15 GiB metadata/cache + 15 GiB database working space + 45 GiB reserve = 150 GiB. NAS 120 GiB rolling detail + 50 GiB annual analysis + 30 GiB checkpoints + 35 GiB incident evidence + 5 GiB catalogue + 20 GiB staging + 90 GiB reserve = 350 GiB. Backups are not a second funded archive copy: verify existing backup coverage/capacity and restore before destructive expiry.
+
+Execute fixed-budget phases 0–2 first: profile/preserve and qualify NAS/backup placement, build archive/rollups/selected evidence, then safe local expiry and receiver recovery. Historical UX and annual-volume/restore qualification follow. Do not silently shorten published windows or erase annual evidence to meet a quota; pause expansion/intake before exhausting recovery reserves. No deletion, guard increase, resize or deployment is enabled by this plan.
 
 ## Immediate next work
 
-1. Execute retention Phase0 and a non-destructive archive pilot:measure formats/compression/checkpoints, establish archive placement and preserve current data.
-2. Implement verified archive replication and safe local expiry, resume continuous RIS receivers under measured capacity guards, and repair the recorded interruption before expanding ingestion.
+1. Execute the 150/350-GiB plan Phase 0 and a non-destructive archive/rollup pilot: measure formats/compression/checkpoints, establish NAS/backup placement and preserve current data.
+2. Implement verified archival/protection and safe local expiry, resume continuous RIS receivers within the local/NAS budgets, and repair the recorded interruption before expanding ingestion.
 3. Add periodic independent RIB reconciliation, database-failure/restart soak and serving concurrency limits.
 4. Expand active-measurement endpoint/network diversity and build evidence-linked incident correlation with persistence, contrary evidence and source-lineage rules.
 5. Complete rendered accessibility/mobile/NOC-display review, then qualify the exact release scope for production. Existing production authorization does not remove technical release gates.
