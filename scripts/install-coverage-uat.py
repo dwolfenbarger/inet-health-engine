@@ -49,6 +49,7 @@ elif sys.argv[1]=='routing':
  backup=config.with_name('routing-observers-'+datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')+'.json');shutil.copy2(config,backup)
  shutil.copy2(candidate/'observers-uat.json',config)
  shutil.copy2(candidate/'collectors/collectors/routing_stream.py',isolated/'routing_stream.py')
+ shutil.copy2(candidate/'collectors/collectors/routing_mrt.py',isolated/'routing_mrt.py')
  run('systemctl','start','inet-routing-stream');run('systemctl','start','inet-routing-recovery')
  print('Expanded to',len(new),'observers; configuration backup',backup,flush=True)
 else:raise SystemExit('Use mesh or routing')

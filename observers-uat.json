@@ -39,7 +39,8 @@
     "lon": -74.01,
     "inventory_date": "2026-10-22",
     "inventory_v4": 1073782,
-    "inventory_v6": 0
+    "inventory_v6": 0,
+    "bootstrap_not_before": "2026-10-23T08:00:00Z"
   },
   {
     "id": "ris-rrc21-as15547-v6",
@@ -54,7 +55,8 @@
     "lon": 2.35,
     "inventory_date": "2026-10-22",
     "inventory_v4": 0,
-    "inventory_v6": 256203
+    "inventory_v6": 256203,
+    "bootstrap_not_before": "2026-10-23T08:00:00Z"
   },
   {
     "id": "ris-rrc15-as28624-v4",
@@ -69,6 +71,7 @@
     "lon": -46.63,
     "inventory_date": "2026-10-22",
     "inventory_v4": 1102142,
-    "inventory_v6": 0
+    "inventory_v6": 0,
+    "bootstrap_not_before": "2026-10-23T08:00:00Z"
   }
 ]

@@ -159,7 +159,9 @@ async def recover(observer,cache,stop=None):
     row=dict(await pool.fetchrow('SELECT * FROM routing_observers WHERE id=$1',observer['id']))
     if row['baseline_state']=='required' or row['baseline_at'] is None:
         snapshots=await manifest(observer,'rib',now-timedelta(hours=30),now-timedelta(minutes=3))
-        snapshots=[f for f in snapshots if row['reset_at'] is None or f['at']>=row['reset_at']]
+        boundaries=[stamp(observer['bootstrap_not_before'])] if observer.get('bootstrap_not_before') else []
+        if row['reset_at'] is not None:boundaries.append(row['reset_at'])
+        snapshots=[f for f in snapshots if not boundaries or f['at']>=max(boundaries)]
         if not snapshots:raise WaitingArchive('No completed snapshot after the latest session boundary')
         await import_file(observer,row,snapshots[-1],'rib',cache)
         row=dict(await pool.fetchrow('SELECT * FROM routing_observers WHERE id=$1',observer['id']))
