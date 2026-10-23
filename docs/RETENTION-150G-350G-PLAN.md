@@ -1,16 +1,18 @@
 # Retention and analysis within 150 GiB local + 350 GiB NAS
 
-Version 2.0 | 2026-10-23 | Prepared by OpenAI Codex
+Version 2.1 | 2026-10-23 | Prepared by OpenAI Codex
 
 ## Goal and changed scope
 
 David set a planning envelope of **150G of container storage and 350G NAS attached**. This plan interprets G as GiB, matching the container allocation convention. Confirm byte quotas when provisioning; if the NAS uses decimal GB, reduce budgets proportionally. The combined allowance is 500 GiB and includes working space and reserves, not 500 GiB of observations.
 
-Maintain **twelve rolling calendar months of analysis, incident history and selected evidence** within this allowance. Keep routine detailed observations for a shorter, explicit period. This supersedes the full-detail twelve-month policy and the 8–12 TiB-per-copy estimate in [the earlier plan](RETENTION-AND-ANALYSIS-12-MONTH-PLAN.md). Those requirements cannot be assumed to fit this budget.
+Maintain **twelve rolling calendar months of analysis, incident history and selected evidence** within this allowance.
+
+David confirmed that full-data retention is a development capability. Bulk raw archives and replay tooling belong to an isolated development/UAT namespace; they are not a production-facing feature or public export endpoint. Production's retained product remains trends, incidents and selected evidence. Internal ingestion buffers are distinct from making a full archive available. This does not add an unbounded or twelve-month full-raw promise to the 350-GiB budget. Keep routine detailed observations for a shorter, explicit period. This supersedes the full-detail twelve-month policy and the 8–12 TiB-per-copy estimate in [the earlier plan](RETENTION-AND-ANALYSIS-12-MONTH-PLAN.md). Those requirements cannot be assumed to fit this budget.
 
 The tradeoff is material: after routine raw evidence expires, the tool can show retained trends, incidents, selected proof and checkpoint comparisons. It cannot replay every historical announcement, reconstruct a route at every arbitrary time or rerun a newly invented detector against discarded raw observations. An incident missed before raw expiry might not be recoverable later. The UI must distinguish measured history, retained evidence, summaries and unavailable detail.
 
-This is a proposed policy and implementation sequence. No allocation, mount, filesystem shrink, data deletion, capacity-guard change or deployment is performed by writing it. Production currently has a 200-GiB root disk; UAT has 100 GiB. No attached NFS/CIFS filesystem was observed in either container during this check. Treat 150 GiB as the target operating budget; do not shrink the existing production filesystem to enforce it.
+This is a proposed policy and implementation sequence. No allocation, mount, filesystem shrink, data deletion, capacity-guard change or deployment is performed by writing it. Production currently has a 200-GiB root disk; UAT has 100 GiB. The host mapping for the supplied NAS path is now verified at `/Volumes/NAS1/storage/ai/ihealth_storage` on `//192.168.1.60/nas1`. CT protection prevented a direct bind attachment; it remains enabled and verified host-side publication is used for the pilot. Treat 150 GiB as the target operating budget; do not shrink the existing production filesystem to enforce it.
 
 ## Storage allocation
 
@@ -133,3 +135,10 @@ The container's 45-GiB and NAS's 90-GiB reserves are planned free capacity. Warn
 Pressure responses are: pause expansion and expensive archive queries; drain verified eligible local data; let declared raw expiry proceed after extraction/verification; pause intake safely if needed. Do not silently shorten annual retention, delete incident pins or convert missing observations into a healthy result. Any later change to scope/resolution/windows must update the UI, manifests and ledger explicitly.
 
 The next implementation slice is the Phase 0 fixed-budget profile and a non-destructive archive/rollup pilot. This plan creates a practical annual analysis service within 500 GiB; it does not claim twelve months of complete raw global Internet history.
+
+
+## Implementation checkpoint — 2026-10-23
+
+The development-only pilot preserved and verified all 1,828,156 stopped journal records on NAS: 1,553,458,889 serialized bytes became 117,921,645 compressed bytes (13.174x). A separate explicitly sampled profile covers legacy BGP, maintained routes and source evidence. This does not establish annual capacity or complete all-source retention. The hourly 72-hour size study has started; a separate finite UAT safety guard pauses future Celery beat scheduling below 30 GiB free without stopping workers or deleting data. The receiver first-stop cause is fixed, but the receiver remains paused under its unchanged cap.
+
+See [RETENTION-PILOT-20261023.md](RETENTION-PILOT-20261023.md) for exact evidence, source roles, hashes, paths and backup/quota gaps. NAS protection/restore and safe expiry are still unqualified; pilot manifests explicitly prohibit expiry. Production and container sizes remain unchanged.

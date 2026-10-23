@@ -6,6 +6,7 @@ import asyncpg,httpx
 from collectors.config import settings
 from collectors.db import get_pg_pool,close_pg_pool
 from collectors.routing_store import register,open_gap,commit_messages
+from collectors.routing_stop import request_stop,stop_reason
 
 MAX_FRAME=1024*1024
 STOP=None
@@ -34,7 +35,7 @@ async def receive(observer,queue,stop):
                     if raw.get('type')=='ris_error':raise RuntimeError('ProviderStreamError')
                     if raw.get('type')!='ris_message':continue
                     await queue.put((raw,datetime.now(timezone.utc)))
-                    if stop.is_set():reason='GracefulStop';break
+                    if stop.is_set():reason=stop_reason(stop);break
     except Exception as exc:
         reason=type(exc).__name__
     finally:
@@ -52,7 +53,7 @@ async def run_observer(observer,stop):
             try:item=await asyncio.wait_for(queue.get(),timeout=1)
             except asyncio.TimeoutError:item='flush'
             if item!='flush' and item[0] is None:
-                reason=item[1]
+                reason=stop_reason(stop,item[1])
                 if batch:
                     await persist(observer,batch);batch=[]
                 break
@@ -63,7 +64,7 @@ async def run_observer(observer,stop):
             if time.monotonic()-checked>60:
                 try:await capacity()
                 except RuntimeError as exc:
-                    reason=str(exc);stop.set()
+                    request_stop(stop,str(exc));reason=stop_reason(stop)
                 checked=time.monotonic()
         await reader
         await open_gap(observer['id'],reason)
@@ -90,7 +91,7 @@ async def main(config):
     global STOP
     STOP=asyncio.Event()
     loop=asyncio.get_running_loop()
-    for sig in [signal.SIGTERM,signal.SIGINT]:loop.add_signal_handler(sig,STOP.set)
+    for sig in [signal.SIGTERM,signal.SIGINT]:loop.add_signal_handler(sig,request_stop,STOP,'SignalStop')
     observers=json.loads(Path(config).read_text())
     if len(observers)>6 or sum(o['mode']=='ris-live' for o in observers)>4:raise ValueError('Review capacity before enabling more than four RIS or six total observers')
     await capacity()

@@ -1,5 +1,5 @@
 # INET Health: Global NOC product and UI/UX roadmap
-Version: 1.3 | Updated: 2026-10-23 | Prepared by OpenAI Codex
+Version: 1.4 | Updated: 2026-10-23 | Prepared by OpenAI Codex
 
 ## Charter and planning status
 
@@ -244,13 +244,13 @@ Use small reviewed vertical slices through DEV1 -> UAT -> separately approved PR
 
 ## Twelve-month history and analysis
 
-The current budget-constrained proposal is [RETENTION-150G-350G-PLAN.md](RETENTION-150G-350G-PLAN.md), version 2.0. David set 150 GiB of container storage plus 350 GiB of attached NAS. This supersedes the earlier full-detail annual retention policy and multi-terabyte estimate. Current containers remain 200 GiB PROD/100 GiB UAT and no NAS mount was observed; this document neither shrinks filesystems nor attaches storage.
+The current budget-constrained proposal is [RETENTION-150G-350G-PLAN.md](RETENTION-150G-350G-PLAN.md), version 2.1. David set 150 GiB of container storage plus 350 GiB of attached NAS. This supersedes the earlier full-detail annual retention policy and multi-terabyte estimate. Current containers remain 200 GiB PROD/100 GiB UAT and no NAS mount was observed; this document neither shrinks filesystems nor attaches storage.
 
 Target: twelve months of trends, incident history, selected evidence and periodic checkpoint comparisons. Routine raw/normalized detail is approximately 24 hours local and initially 72 hours on NAS, targeting seven days only after compression/burst profiling. Global/regional hourly trends and daily ASN summaries span twelve months; hourly ASN history spans 90 days, with a bounded watchlist cohort retained hourly for the year. Older arbitrary route replay and full new-detector reanalysis are unavailable after routine raw expiry unless their evidence was selected and retained.
 
 Allocation: local 20 GiB OS/application + 20 GiB current routes + 35 GiB recent detail + 15 GiB metadata/cache + 15 GiB database working space + 45 GiB reserve = 150 GiB. NAS 120 GiB rolling detail + 50 GiB annual analysis + 30 GiB checkpoints + 35 GiB incident evidence + 5 GiB catalogue + 20 GiB staging + 90 GiB reserve = 350 GiB. Backups are not a second funded archive copy: verify existing backup coverage/capacity and restore before destructive expiry.
 
-Execute fixed-budget phases 0–2 first: profile/preserve and qualify NAS/backup placement, build archive/rollups/selected evidence, then safe local expiry and receiver recovery. Historical UX and annual-volume/restore qualification follow. Do not silently shorten published windows or erase annual evidence to meet a quota; pause expansion/intake before exhausting recovery reserves. No deletion, guard increase, resize or deployment is enabled by this plan.
+Execute fixed-budget phases 0–2 first: profile/preserve and qualify NAS/backup placement, build archive/rollups/selected evidence, then safe local expiry and receiver recovery. Historical UX and annual-volume/restore qualification follow. Do not silently shorten published windows or erase annual evidence to meet a quota; pause expansion/intake before exhausting recovery reserves. Full bulk-data archival/replay is development-only, per David's clarification. The first non-destructive pilot verified all 1,828,156 journal records on NAS, added sampled format profiles, started the finite 72-hour study and fixed capacity-stop reporting. A temporary UAT safeguard pauses future beat scheduling below 30 GiB free. CT protection prevented a direct bind mount; it was left enabled and host-side NAS publication is used. No expiry, receiver guard increase, resize or production deployment occurred. Evidence: [RETENTION-PILOT-20261023.md](RETENTION-PILOT-20261023.md).
 
 ## Immediate next work
 
