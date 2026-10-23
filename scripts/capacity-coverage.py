@@ -11,6 +11,7 @@ async def main():
  print('OBSERVER_STATUS',json.dumps([dict(r) for r in rows],default=str),flush=True)
  for table in ['routing_routes','routing_messages','source_evidence','bgp_updates']:
   print('TABLE_BYTES',table,await c.fetchval('SELECT pg_total_relation_size($1::regclass)',table),flush=True)
+ print('OBSERVER_TIME_INDEX_VALID',await c.fetchval("SELECT bool_and(i.indisvalid) FROM pg_index i JOIN pg_class x ON x.oid=i.indexrelid WHERE x.relname='routing_routes_observer_time'"),flush=True)
  print('ROOT_FREE_GIB',round(shutil.disk_usage('/').free/1024**3,2),flush=True)
  await c.close()
 asyncio.run(main())

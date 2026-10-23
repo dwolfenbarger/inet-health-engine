@@ -1,11 +1,19 @@
 # INET Health: Global NOC product and UI/UX roadmap
-Version: 1.0 | Date: 2026-10-22 | Prepared by OpenAI Codex
+Version: 1.1 | Updated: 2026-10-23 | Prepared by OpenAI Codex
 
 ## Charter and planning status
 
 David confirmed the goal: a visual replacement for routine BGP looking-glass use and a global Internet health monitor for NOCs and public ISP use. Both 2D and 3D views are required. Operators must quickly understand global conditions and investigate ASNs, prefixes and paths for routing instability, suspected hijacking, congestion and other observable degradation.
 
 This document fulfills the requested phased plan. Scope direction is accepted; phase details, performance targets and suggested defaults below are proposed implementation criteria. Creating this plan does not deploy software, merge code, enroll providers, spend measurement credits or publish the service.
+
+## Current implementation status — 2026-10-23
+
+Production is the source-evidence release (PR #6/master19c2923). The expanded UAT canary in draft PR #7 adds maintained peer/session route views, MRT recovery, IP longest-prefix lookup, five configured routing observers, a regional coverage-gap panel and 28 public Atlas mesh directions across seven anchors. Live mesh collection, target/probe identity checks, 25-hour latency/loss baselines and qualified change candidates are implemented; this is not the full Phase4/5 incident engine.
+
+New York and Paris now have audited 08:00 UTC snapshots and completed archive catch-up. Singapore and Nairobi retain audited baselines. Sao Paulo retains live changes but remains snapshot-required after two finalization timeouts; the current indexed, idempotent retry is still being qualified. There is no global health score or defensible global coverage percentage. Independent RIB reconciliation, both address families per region, more diverse measurement endpoints, storage/retention policy, sustained failure testing, rendered UX review and public release controls remain open.
+
+Exact application commits, deployment artifacts, source inventories, tests and current bootstrap evidence: docs/CONTINUOUS-ROUTING-20261023.md and docs/GLOBAL-COVERAGE-20261023.md. Earlier starting-point findings below are historical, not the current production state.
 
 ## Product principles
 
@@ -18,7 +26,7 @@ This document fulfills the requested phased plan. Scope direction is accepted; p
 - Preserve the existing React/TypeScript implementation and useful globe assets. Add modular views and shared contracts rather than replacing the whole stack.
 - Implement public-target validation, quotas, private-data boundaries and observability as their features arrive, not only at final release.
 
-## Verified starting point
+## Initial review starting point — 2026-10-22 (historical)
 
 - Existing source has a 3D globe, event rail/feed, ASN drawer, path/baseline/community panels, mobile shell, Zustand store and TanStack Query.
 - Deployed-source snapshot reviewed: recovery/prod-baseline-20261022 at bd87a80; GitHub master remains c3d990a as of this review. The deployed frontend package declares React 19, Zustand 5 and Three.js, despite older README claims.
@@ -236,11 +244,11 @@ Use small reviewed vertical slices through DEV1 -> UAT -> separately approved PR
 
 ## Immediate next work
 
-1. Finish Phase 0 capability/dependency inventory and collector validation in DEV1.
-2. Run the actual UI audit and define screen hierarchy, component states and common investigation contracts.
-3. Produce the Overview, ASN, Prefix and Compare Routes wireframes and the2D/3D interaction prototype.
-4. Deliver the Phase 2 visual uplift in reviewable slices while data reliability work proceeds.
-5. Refine later phase effort and provider choices from the measured audit.
+1. Resolve Sao Paulo snapshot finalization, verify replay and sustained continuity, then expand address-family/geographic diversity in measured batches.
+2. Measure sustained journal/history growth and implement a recoverable retention/archival policy before broad ingestion.
+3. Add periodic independent RIB reconciliation, database-failure/restart soak and serving concurrency limits.
+4. Expand active-measurement endpoint/network diversity and build evidence-linked incident correlation with persistence, contrary evidence and source-lineage rules.
+5. Complete rendered accessibility/mobile/NOC-display review, then qualify the exact release scope for production. Existing production authorization does not remove technical release gates.
 
 ## Reference specifications and provider documentation
 
