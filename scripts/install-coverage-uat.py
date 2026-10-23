@@ -39,6 +39,14 @@ WantedBy=multi-user.target
 ''')
  run('systemctl','daemon-reload');run('systemctl','start','inet-atlas-mesh')
  print('Mesh canary started; not enabled at boot',flush=True)
+elif sys.argv[1]=='mesh-refresh':
+ if run('systemctl','show','inet-atlas-mesh','--property=ActiveState','--value') not in ['inactive','failed']:
+  raise SystemExit('Mesh service has not stopped gracefully')
+ config=Path('/etc/inet-health/atlas-mesh.json')
+ backup=config.with_name('atlas-mesh-'+datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')+'.json')
+ shutil.copy2(config,backup);shutil.copy2(candidate/'atlas-mesh-uat.json',config)
+ shutil.copy2(candidate/'collectors/collectors/atlas_mesh.py',isolated/'atlas_mesh.py')
+ run('systemctl','start','inet-atlas-mesh');print('Mesh configuration replaced; backup',backup,flush=True)
 elif sys.argv[1]=='routing':
  for unit in ['inet-routing-stream','inet-routing-recovery']:
   state=run('systemctl','show',unit,'--property=ActiveState','--value')

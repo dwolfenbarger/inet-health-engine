@@ -11,7 +11,7 @@ export default function Coverage({family,asn}:{family:string;asn:string}) {
  const [tab,setTab]=useState('coverage'),[coverage,setCoverage]=useState<CoverageResult|null>(null),[mesh,setMesh]=useState<Mesh|null>(null),[error,setError]=useState('')
  useEffect(()=>{let stopped=false;let timer:ReturnType<typeof setTimeout>;const controller=new AbortController()
   const load=async()=>{try{const p=new URLSearchParams({family});if(asn)p.set('asn',asn)
-   const responses=await Promise.all([fetch('/api/v1/noc/coverage',{signal:controller.signal,cache:'no-store'}),fetch('/api/v1/noc/mesh?'+p,{signal:controller.signal,cache:'no-store'})])
+   const responses=await Promise.all([fetch('/api/v1/noc/coverage',{signal:AbortSignal.any([controller.signal,AbortSignal.timeout(15000)]),cache:'no-store'}),fetch('/api/v1/noc/mesh?'+p,{signal:AbortSignal.any([controller.signal,AbortSignal.timeout(15000)]),cache:'no-store'})])
    if(responses.some(r=>!r.ok))throw new Error('Coverage or path evidence unavailable')
    const [a,b]=await Promise.all(responses.map(r=>r.json()));if(!stopped){setCoverage(a as CoverageResult);setMesh({...b,filter_key:family+'|'+asn} as Mesh);setError('')}
   }catch(e){if(!stopped)setError(e instanceof Error?e.message:'Evidence unavailable')}finally{if(!stopped)timer=setTimeout(load,60000)}};void load()
