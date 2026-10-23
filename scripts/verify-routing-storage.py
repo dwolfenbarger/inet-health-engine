@@ -48,7 +48,9 @@ async def main():
    observed=dict(await c.fetchrow('SELECT * FROM routing_observers WHERE id=$1',obs['id']))
    old={'timestamp':(now+timedelta(seconds=1)).timestamp(),'elem_type':'A','peer_ip':obs['peer_ip'],
         'peer_asn':obs['peer_asn'],'prefix':'1.1.1.0/24','as_path':'4288000245 13335'}
+   before_tid=await c.fetchval('SELECT ctid::text FROM routing_routes WHERE observer=$1',obs['id'])
    await archive_batch(obs,observed['epoch'],observed['generation'],[(1,mrt_change(old,obs))],1,'archive')
+   assert await c.fetchval('SELECT ctid::text FROM routing_routes WHERE observer=$1',obs['id'])==before_tid
    assert not await c.fetchval('SELECT present FROM routing_routes WHERE observer=$1',obs['id'])
    # Reconnection starts at the committed event, not the receive wall clock.
    await open_gap(obs['id'],'test-reconnect')

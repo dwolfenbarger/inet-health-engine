@@ -178,6 +178,7 @@ CREATE TABLE IF NOT EXISTS routing_routes (
 );
 CREATE INDEX IF NOT EXISTS routing_routes_prefix ON routing_routes USING gist(prefix inet_ops);
 CREATE INDEX IF NOT EXISTS routing_routes_recent ON routing_routes(event_at DESC,observer,prefix);
+CREATE INDEX IF NOT EXISTS routing_routes_observer_time ON routing_routes(observer,event_at);
 CREATE INDEX IF NOT EXISTS routing_routes_origin ON routing_routes(observer,origin_asn) WHERE present;
 CREATE TABLE IF NOT EXISTS routing_gaps (
  id UUID PRIMARY KEY, observer TEXT NOT NULL REFERENCES routing_observers(id),

@@ -80,7 +80,7 @@ async def download(url,cache):
         return h.hexdigest()
     return destination,await asyncio.to_thread(digest)
 
-async def import_file(observer,row,file,kind,cache):
+async def import_file(observer,row,file,kind,cache,stop=None):
     pool=await get_pg_pool()
     existing=await pool.fetchrow('''SELECT records,audit FROM routing_archives
         WHERE observer=$1 AND url=$2 AND generation=$3''',observer['id'],file['url'],row['generation'])
@@ -117,6 +117,7 @@ async def import_file(observer,row,file,kind,cache):
         return batch
     try:
         while True:
+            if stop and stop.is_set():raise ReplayPending('Graceful stop at committed MRT batch boundary')
             batch=await loop.run_in_executor(executor,next_batch)
             if not batch:break
             await archive_batch(observer,row['epoch'],row['generation'],batch,0 if kind=='rib' else 1,file['at'].strftime('%Y%m%d%H%M'))
@@ -151,7 +152,7 @@ async def replay_files(observer,row,files,cache,stop=None,budget=4):
     pending=[f for f in files if f['url'] not in applied]
     for file in pending[:budget]:
         if stop and stop.is_set():raise ReplayPending('Graceful stop at committed archive boundary')
-        await import_file(observer,row,file,'updates',cache)
+        await import_file(observer,row,file,'updates',cache,stop=stop)
     if len(pending)>budget:raise ReplayPending(f'{len(pending)-budget} archive files remain; yielding to other observers')
 
 async def recover(observer,cache,stop=None):
@@ -164,7 +165,7 @@ async def recover(observer,cache,stop=None):
         if row['reset_at'] is not None:boundaries.append(row['reset_at'])
         snapshots=[f for f in snapshots if not boundaries or f['at']>=max(boundaries)]
         if not snapshots:raise WaitingArchive('No completed snapshot after the latest session boundary')
-        await import_file(observer,row,snapshots[-1],'rib',cache)
+        await import_file(observer,row,snapshots[-1],'rib',cache,stop=stop)
         row=dict(await pool.fetchrow('SELECT * FROM routing_observers WHERE id=$1',observer['id']))
     period=300 if observer['mode']=='ris-live' else 900
     gaps=await pool.fetch("SELECT * FROM routing_gaps WHERE observer=$1 AND state NOT IN ('repaired','snapshot_superseded') ORDER BY opened_at",observer['id'])

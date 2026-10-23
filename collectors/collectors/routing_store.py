@@ -25,7 +25,8 @@ ON CONFLICT(observer,prefix) DO UPDATE SET
                    OR excluded.epoch<>routing_routes.epoch THEN excluded.attrs ELSE routing_routes.attrs END,
  evidence_id=CASE WHEN (excluded.event_at,excluded.rank,excluded.event_order)>(routing_routes.event_at,routing_routes.rank,routing_routes.event_order)
                    OR excluded.epoch<>routing_routes.epoch THEN excluded.evidence_id ELSE routing_routes.evidence_id END
-WHERE excluded.epoch>=routing_routes.epoch
+WHERE excluded.epoch>routing_routes.epoch OR (excluded.epoch=routing_routes.epoch AND
+ (excluded.event_at,excluded.rank,excluded.event_order)>(routing_routes.event_at,routing_routes.rank,routing_routes.event_order))
 '''
 
 def route_row(observer,row,change,rank,order):
