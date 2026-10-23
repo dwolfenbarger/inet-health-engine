@@ -1,5 +1,5 @@
 # INET Health: Global NOC product and UI/UX roadmap
-Version: 1.1 | Updated: 2026-10-23 | Prepared by OpenAI Codex
+Version: 1.2 | Updated: 2026-10-23 | Prepared by OpenAI Codex
 
 ## Charter and planning status
 
@@ -11,7 +11,7 @@ This document fulfills the requested phased plan. Scope direction is accepted; p
 
 Production is the source-evidence release (PR #6/master19c2923). The expanded UAT canary in draft PR #7 adds maintained peer/session route views, MRT recovery, IP longest-prefix lookup, five configured routing observers, a regional coverage-gap panel and 28 public Atlas mesh directions across seven anchors. Live mesh collection, target/probe identity checks, 25-hour latency/loss baselines and qualified change candidates are implemented; this is not the full Phase4/5 incident engine.
 
-New York and Paris now have audited 08:00 UTC snapshots and completed archive catch-up. Singapore and Nairobi retain audited baselines. Sao Paulo completed its audited 1,091,211-prefix snapshot after two finalization timeouts; its strict catch-up is waiting for archive publication. All five now have audited baselines. There is no global health score or defensible global coverage percentage. Independent RIB reconciliation, both address families per region, more diverse measurement endpoints, storage/retention policy, sustained failure testing, rendered UX review and public release controls remain open.
+New York and Paris now have audited 08:00 UTC snapshots and completed archive catch-up. Singapore and Nairobi retain audited baselines. Sao Paulo completed its audited 1,091,211-prefix snapshot and strict archive catch-up. All five now have audited baselines. At the 2026-10-23 19:13 UTC status check, the four RIS receivers were inactive with the raw journal at the 2-GiB safety cap; interruption gaps remain visible. Recoverable retention/archival is now an immediate operating blocker. There is no global health score or defensible global coverage percentage. Independent RIB reconciliation, both address families per region, more diverse measurement endpoints, storage/retention policy, sustained failure testing, rendered UX review and public release controls remain open.
 
 Exact application commits, deployment artifacts, source inventories, tests and current bootstrap evidence: docs/CONTINUOUS-ROUTING-20261023.md and docs/GLOBAL-COVERAGE-20261023.md. Earlier starting-point findings below are historical, not the current production state.
 
@@ -242,10 +242,16 @@ Use small reviewed vertical slices through DEV1 -> UAT -> separately approved PR
 - Evidence provenance, limitations, migrations, rollback and release identity are recorded.
 - UAT review evidence and outstanding limitations remain explicit. Tests passing does not imply human appearance acceptance or production deployment authorization.
 
+## Twelve-month history and analysis
+
+The proposed retention and execution plan is [RETENTION-AND-ANALYSIS-12-MONTH-PLAN.md](RETENTION-AND-ANALYSIS-12-MONTH-PLAN.md). Target: twelve calendar months of full captured observations and evidence, daily route checkpoints, searchable incidents and reproducible analysis. Proposed tiers:72-hour raw recovery buffer, seven-day indexed history, twelve-month compressed queryable detail and longer-lived analytical summaries within the same window. An independently recoverable second archive copy is included. Provisional budget:500GiB fast storage and8–12TiB usable per archive copy, subject to profiling; this is not a hardware allocation. No deletion, guard increase or production deployment is enabled by the plan.
+
+Execute retention phases0–2 first:measure/preserve, durable archive and history capture, then safe local expiry and receiver recovery. Historical UI/analysis and annual-volume recovery qualification follow. Retention applies to actual captured source scope, not complete global visibility; backfill availability remains source-specific.
+
 ## Immediate next work
 
-1. Verify Sao Paulo archive catch-up and sustained continuity, then expand address-family/geographic diversity in measured batches.
-2. Measure sustained journal/history growth and implement a recoverable retention/archival policy before broad ingestion.
+1. Execute retention Phase0 and a non-destructive archive pilot:measure formats/compression/checkpoints, establish archive placement and preserve current data.
+2. Implement verified archive replication and safe local expiry, resume continuous RIS receivers under measured capacity guards, and repair the recorded interruption before expanding ingestion.
 3. Add periodic independent RIB reconciliation, database-failure/restart soak and serving concurrency limits.
 4. Expand active-measurement endpoint/network diversity and build evidence-linked incident correlation with persistence, contrary evidence and source-lineage rules.
 5. Complete rendered accessibility/mobile/NOC-display review, then qualify the exact release scope for production. Existing production authorization does not remove technical release gates.
