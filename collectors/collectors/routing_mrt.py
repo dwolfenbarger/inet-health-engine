@@ -4,6 +4,7 @@ from datetime import datetime,timedelta,timezone
 from pathlib import Path
 from urllib.parse import urlparse
 import asyncpg,httpx
+from concurrent.futures import ThreadPoolExecutor
 from collectors.config import settings
 from collectors.db import get_pg_pool,close_pg_pool
 from collectors.routing_model import stamp,mrt_change
@@ -96,13 +97,16 @@ async def import_file(observer,row,file,kind,cache):
            WHERE id=$1 AND epoch=$4 AND generation=$5''',observer['id'],reset,uuid.uuid4(),row['epoch'],row['generation'])
         raise WaitingArchive('Session change requires a newer RIB snapshot')
     import bgpkit
-    iterator=iter(bgpkit.Parser(url=str(path),filters={'peer_ips':observer['peer_ip']}))
+    executor=ThreadPoolExecutor(max_workers=1)
+    loop=asyncio.get_running_loop();holder={}
+    def create_parser():holder['iterator']=iter(bgpkit.Parser(url=str(path),filters={'peer_ips':observer['peer_ip']}))
+    await loop.run_in_executor(executor,create_parser)
     count=0;v4=0;v6=0
     def next_batch():
         nonlocal count,v4,v6
         batch=[]
         for _ in range(1000):
-            try:element=next(iterator)
+            try:element=next(holder['iterator'])
             except StopIteration:break
             count+=1
             item=mrt_change(element,observer,snapshot=file['at'] if kind=='rib' else None,order=count,url=file['url'])
@@ -110,10 +114,16 @@ async def import_file(observer,row,file,kind,cache):
             else:v4+=1
             batch.append((count,item))
         return batch
-    while True:
-        batch=await asyncio.to_thread(next_batch)
-        if not batch:break
-        await archive_batch(observer,row['epoch'],row['generation'],batch,0 if kind=='rib' else 1,file['at'].strftime('%Y%m%d%H%M'))
+    try:
+        while True:
+            batch=await loop.run_in_executor(executor,next_batch)
+            if not batch:break
+            await archive_batch(observer,row['epoch'],row['generation'],batch,0 if kind=='rib' else 1,file['at'].strftime('%Y%m%d%H%M'))
+    finally:
+        # PyO3 parsers are !Send: construction, iteration and destruction stay on
+        # the same dedicated thread. Only plain normalized Python records leave it.
+        await loop.run_in_executor(executor,holder.clear)
+        executor.shutdown(wait=True)
     if kind=='rib' and (v4!=review['rib_v4'] or v6!=review['rib_v6']):
         raise ValueError('Decoded RIB count does not match independent MRT audit')
     async with pool.acquire() as conn,conn.transaction():
