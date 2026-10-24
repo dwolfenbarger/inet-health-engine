@@ -1,6 +1,6 @@
 """
 collectors/ripe_ris_collector.py — RIPE RIS Live streaming BGP collector.
-VENGEANCE: 5 collectors, 60s window, no memory cap, 25K batch inserts.
+Bounded legacy sample across five collectors; continuous selected-peer state is separate.
 """
 import asyncio, json, signal, time
 from datetime import datetime, timezone
@@ -32,9 +32,9 @@ RIS_CLIENT_ID = "inet-health-engine/0.1"
 # https://ris.ripe.net/docs/route-collectors/
 RIS_COLLECTORS = ["rrc00", "rrc11", "rrc14", "rrc16", "rrc21"]
 
-# No memory cap on VENGEANCE (31GB RAM). Batch raised from Pi-era 5K to 25K.
-MAX_UPDATES = 50_000  # Explicit bounded sample; not a continuous full feed.
-BATCH_SIZE     = 25_000   # 25K rows/transaction is well within TimescaleDB capacity
+# Native storage is shared with current routing and provider evidence.
+MAX_UPDATES = 10_000  # Explicit bounded sample; not a continuous full feed.
+BATCH_SIZE = 500  # Keep each write below the native query deadline.
 
 
 def single_next_hop(value):
@@ -256,7 +256,7 @@ async def publish_ris_to_redis(updates: list[BGPUpdate], anomalies: list[BGPAnom
         log.warning("redis_publish_error", error=str(e))
 
 
-async def run_collection_cycle(window_seconds: int):
+async def _run_collection_cycle(window_seconds: int):
     """Full cycle: load cache → stream → detect → batch write → flush cache → publish."""
     log.info("ris_cycle_start", window_s=window_seconds,
              collectors=RIS_COLLECTORS)
@@ -398,3 +398,14 @@ if __name__ == "__main__":
         structlog.dev.ConsoleRenderer(),
     ])
     asyncio.run(main())
+
+
+
+async def run_collection_cycle(window_seconds: int):
+    pool=await get_pg_pool()
+    async with pool.acquire() as lock:
+        if not await lock.fetchval("SELECT pg_try_advisory_lock(hashtext('inet-ris-sampled'))"):
+            log.info('ris_cycle_skipped',reason='previous_cycle_active')
+            return
+        try:return await _run_collection_cycle(window_seconds)
+        finally:await lock.execute("SELECT pg_advisory_unlock(hashtext('inet-ris-sampled'))")

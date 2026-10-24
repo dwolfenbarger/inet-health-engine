@@ -8,7 +8,8 @@ async def save_cycle(source, records, detail, *, state='partial', error_code=Non
     now = datetime.now(timezone.utc)
     latest = max((r['observed_at'] for r in records), default=None)
     async with pool.acquire() as conn, conn.transaction():
-        if records:
+        for offset in range(0,len(records),500):
+            batch=records[offset:offset+500]
             await conn.executemany('''
                 INSERT INTO source_evidence(source,evidence_id,observed_at,asn,family,resource,payload)
                 VALUES($1,$2,$3,$4,$5,$6,$7::jsonb)
@@ -18,7 +19,7 @@ async def save_cycle(source, records, detail, *, state='partial', error_code=Non
                 WHERE excluded.observed_at > source_evidence.observed_at OR
                   (excluded.observed_at=source_evidence.observed_at AND excluded.payload IS DISTINCT FROM source_evidence.payload)
             ''', [(source,r['id'],r['observed_at'],r.get('asn'),r.get('family'),r.get('resource'),
-                   json.dumps(r['payload'],allow_nan=False)) for r in records])
+                   json.dumps(r['payload'],allow_nan=False)) for r in batch])
         success = now if state not in ['error','unconfigured','unavailable'] else None
         await conn.execute('''
             INSERT INTO source_status(source,last_attempt,last_success,last_observation,state,records,detail,error_code)

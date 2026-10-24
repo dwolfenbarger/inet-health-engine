@@ -15,13 +15,16 @@ from collectors.source_evidence import save_cycle, source_failure
 
 SOURCE = 'rpki-local'
 BATCH = 500
-MAX_PAIRS = 50000
+MAX_PAIRS = 10000
 
-def parse_validations(data, requested, now=None):
+def parse_validations(data, requested, now=None, *, completed=None, serial=None, max_age=timedelta(minutes=20)):
     now = now or datetime.now(timezone.utc)
     generated = datetime.fromisoformat(data['generatedTime'].replace('Z','+00:00'))
-    if generated.tzinfo is None or generated > now+timedelta(minutes=2) or now-generated > timedelta(minutes=20):
+    freshness=completed or generated
+    if freshness.tzinfo is None or freshness>now+timedelta(minutes=2) or now-freshness>max_age:
         raise ValueError('Validator snapshot is stale or has an invalid clock')
+    if generated.tzinfo is None or generated>freshness+timedelta(seconds=2) or freshness-generated>timedelta(hours=2):
+        raise ValueError('Snapshot generation and completion clocks differ')
     expected = set(requested)
     found = {}
     for entry in data['validated_routes']:
@@ -32,10 +35,12 @@ def parse_validations(data, requested, now=None):
         state = validity['state']
         if state not in ['valid','invalid','not-found']:
             raise ValueError('Unknown validation state')
-        found[pair] = {'id':f'{pair[0]}|{pair[1]}','observed_at':generated,
+        found[pair] = {'id':f'{pair[0]}|{pair[1]}','observed_at':freshness,
             'asn':pair[1], 'family':6 if ':' in pair[0] else 4,'resource':pair[0],
             'payload':{'prefix':pair[0],'origin_asn':pair[1],'status':state,
                        'validity':validity,'generated_at':generated.isoformat(),
+                       'validation_completed_at':freshness.isoformat(),'snapshot_serial':serial,'freshness_limit_seconds':int(max_age.total_seconds()),
+                       'freshness_basis':'completed validation' if completed else 'provider generatedTime',
                        'checked_at':now.isoformat(),'source':SOURCE}}
     if set(found) != expected:
         raise ValueError('Missing validation results')
@@ -47,18 +52,16 @@ async def run_collection_cycle():
         if not await lock.fetchval("SELECT pg_try_advisory_lock(hashtext('inet-rpki-local'))"):
             return []
         try:
-            # Prioritize pairs with no validation or oldest snapshot; revisit as
-            # origin observations arrive. This is explicitly bounded coverage.
-            pairs = await pool.fetch('''
-              WITH pairs AS (
-                SELECT DISTINCT prefix,origin_asn FROM bgp_updates
-                WHERE time > now()-interval '1 hour' AND origin_asn IS NOT NULL
-                  AND origin_asn > 0 AND collector NOT LIKE 'stub%'
-              ) SELECT p.prefix,p.origin_asn FROM pairs p
-                LEFT JOIN source_evidence e ON e.source='rpki-local'
-                   AND e.evidence_id=p.prefix||'|'||p.origin_asn::text
-                ORDER BY e.observed_at NULLS FIRST,p.prefix,p.origin_asn LIMIT $1
-            ''',MAX_PAIRS+1)
+            # Bound the input before DISTINCT. The previous full-hour aggregate
+            # scanned millions of historical rows; the time index serves this
+            # recent observed cohort directly, independent of total table size.
+            async with pool.acquire() as conn,conn.transaction(readonly=True):
+                await conn.execute("SET LOCAL statement_timeout='12s'")
+                pairs=await conn.fetch("""
+                 SELECT DISTINCT prefix,origin_asn FROM (SELECT prefix,origin_asn FROM bgp_updates
+                  WHERE time>now()-interval '1 hour' AND origin_asn>0 AND collector NOT LIKE 'stub%'
+                  ORDER BY time DESC LIMIT 20000) recent LIMIT $1
+                """,MAX_PAIRS+1)
             capped = len(pairs)>MAX_PAIRS
             pairs = [(p['prefix'],p['origin_asn']) for p in pairs[:MAX_PAIRS]]
             records=[];validator={}
@@ -73,6 +76,12 @@ async def run_collection_cycle():
                 response=await client.get('/json',timeout=120);response.raise_for_status()
                 snapshot=response.json()
                 generated=snapshot['metadata']['generatedTime']
+                after=await client.get('/api/v1/status');after.raise_for_status();after=after.json()
+                if status['serial']!=after['serial'] or status['lastUpdateDone']!=after['lastUpdateDone']:
+                    raise ValueError('Validator changed during snapshot fetch; retry a coherent snapshot')
+                completed=datetime.fromisoformat(after['lastUpdateDone'].replace('Z','+00:00'))
+                validator.update({'snapshot_started_at':generated,'validation_completed_at':completed.isoformat(),
+                    'snapshot_serial':after['serial'],'freshness_basis':'completed validation, serial checked around export'})
                 index=await asyncio.to_thread(VRPIndex,snapshot['roas'])
                 validator['vrp_count']=index.count
                 del snapshot
@@ -81,21 +90,21 @@ async def run_collection_cycle():
                 answers={'generatedTime':generated,'validated_routes':[
                     {'route':{'prefix':p,'origin_asn':f'AS{a}'},'validity':index.validate(p,a)}
                     for p,a in pairs]}
-                records=parse_validations(answers,pairs)
+                records=parse_validations(answers,pairs,completed=completed,serial=after['serial'],max_age=timedelta(minutes=60))
                 del index,answers
-            await save_cycle(SOURCE,records,{'scope':'Recently observed prefix/origin pairs from the last hour',
-                'cycle_limit':MAX_PAIRS,'cycle_capped':capped,'validated_pairs':len(records),
+            await save_cycle(SOURCE,records,{'scope':'Prefix/origin candidates from the latest bounded 20,000 observed sampled updates in the last hour',
+                'freshness_limit_seconds':3600,'cycle_limit':MAX_PAIRS,'cycle_capped':capped,'validated_pairs':len(records),
                 'validator':validator,
                 'limitations':['RPKI validates origin authorization, not AS path safety or hijacking.',
                   'Results depend on the locally available validated repositories; unavailable ROAs can affect coverage.',
-                  'Recently observed pairs are a subset of the global routing table.']})
+                  'Candidate validation is a bounded subset; it does not certify every global route.']})
             # Versioned keys prevent reuse of answers from the former public
             # endpoint. Cache expiry is tied to the validated snapshot, not fetch time.
             async with aioredis.from_url(settings.redis_url,decode_responses=True) as redis:
                 pipe=redis.pipeline()
                 now=datetime.now(timezone.utc)
                 for r in records:
-                    p=r['payload'];ttl=int(1200-(now-r['observed_at']).total_seconds())
+                    p=r['payload'];ttl=int(3600-(now-r['observed_at']).total_seconds())
                     if ttl>0:pipe.set(f"rpki:v2:{p['prefix']}:{p['origin_asn']}",p['status'],ex=ttl)
                 await pipe.execute()
             return records

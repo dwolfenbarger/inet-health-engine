@@ -1,11 +1,19 @@
 # INET Health: Global NOC product and UI/UX roadmap
-Version: 1.0 | Date: 2026-10-22 | Prepared by OpenAI Codex
+Version: 1.6 | Updated: 2026-10-23 | Prepared by OpenAI Codex
 
 ## Charter and planning status
 
 David confirmed the goal: a visual replacement for routine BGP looking-glass use and a global Internet health monitor for NOCs and public ISP use. Both 2D and 3D views are required. Operators must quickly understand global conditions and investigate ASNs, prefixes and paths for routing instability, suspected hijacking, congestion and other observable degradation.
 
 This document fulfills the requested phased plan. Scope direction is accepted; phase details, performance targets and suggested defaults below are proposed implementation criteria. Creating this plan does not deploy software, merge code, enroll providers, spend measurement credits or publish the service.
+
+## Current implementation status — 2026-10-23
+
+Production is the source-evidence release (PR #6/master19c2923). The expanded UAT canary in draft PR #7 adds maintained peer/session route views, MRT recovery, IP longest-prefix lookup, five configured routing observers, a regional coverage-gap panel and 28 public Atlas mesh directions across seven anchors. Live mesh collection, target/probe identity checks, 25-hour latency/loss baselines and qualified change candidates are implemented; this is not the full Phase4/5 incident engine.
+
+New York and Paris now have audited 08:00 UTC snapshots and completed archive catch-up. Singapore and Nairobi retain audited baselines. Sao Paulo completed its audited 1,091,211-prefix snapshot and strict archive catch-up. All five now have audited baselines. At the 2026-10-23 19:13 UTC status check, the four RIS receivers were inactive with the raw journal at the 2-GiB safety cap; interruption gaps remain visible. Recoverable retention/archival is now an immediate operating blocker. There is no global health score or defensible global coverage percentage. Independent RIB reconciliation, both address families per region, more diverse measurement endpoints, storage/retention policy, sustained failure testing, rendered UX review and public release controls remain open.
+
+Exact application commits, deployment artifacts, source inventories, tests and current bootstrap evidence: docs/CONTINUOUS-ROUTING-20261023.md and docs/GLOBAL-COVERAGE-20261023.md. Earlier starting-point findings below are historical, not the current production state.
 
 ## Product principles
 
@@ -18,7 +26,7 @@ This document fulfills the requested phased plan. Scope direction is accepted; p
 - Preserve the existing React/TypeScript implementation and useful globe assets. Add modular views and shared contracts rather than replacing the whole stack.
 - Implement public-target validation, quotas, private-data boundaries and observability as their features arrive, not only at final release.
 
-## Verified starting point
+## Initial review starting point — 2026-10-22 (historical)
 
 - Existing source has a 3D globe, event rail/feed, ASN drawer, path/baseline/community panels, mobile shell, Zustand store and TanStack Query.
 - Deployed-source snapshot reviewed: recovery/prod-baseline-20261022 at bd87a80; GitHub master remains c3d990a as of this review. The deployed frontend package declares React 19, Zustand 5 and Three.js, despite older README claims.
@@ -234,13 +242,23 @@ Use small reviewed vertical slices through DEV1 -> UAT -> separately approved PR
 - Evidence provenance, limitations, migrations, rollback and release identity are recorded.
 - UAT review evidence and outstanding limitations remain explicit. Tests passing does not imply human appearance acceptance or production deployment authorization.
 
+## Twelve-month history and analysis
+
+The current budget-constrained proposal is [RETENTION-150G-350G-PLAN.md](RETENTION-150G-350G-PLAN.md), version 2.3. David set 150 GiB of container storage plus 350 GiB of attached NAS. This supersedes the earlier full-detail annual retention policy and multi-terabyte estimate. Current containers remain 200 GiB PROD/100 GiB UAT and no NAS mount was observed; this document neither shrinks filesystems nor attaches storage.
+
+Target: twelve months of trends, incident history, selected evidence and periodic checkpoint comparisons. Routine raw/normalized detail is approximately 24 hours local and initially 72 hours on NAS, targeting seven days only after compression/burst profiling. Global/regional hourly trends and daily ASN summaries span twelve months; hourly ASN history spans 90 days, with a bounded watchlist cohort retained hourly for the year. Older arbitrary route replay and full new-detector reanalysis are unavailable after routine raw expiry unless their evidence was selected and retained.
+
+Allocation: local 20 GiB OS/application + 20 GiB current routes + 35 GiB recent detail + 15 GiB metadata/cache + 15 GiB database working space + 45 GiB reserve = 150 GiB. NAS 120 GiB rolling detail + 50 GiB annual analysis + 30 GiB checkpoints + 35 GiB incident evidence + 5 GiB catalogue + 20 GiB staging + 90 GiB reserve = 350 GiB. Backups are not a second funded archive copy: verify existing backup coverage/capacity and restore before destructive expiry.
+
+Execute fixed-budget phases 0–2 first: profile/preserve and qualify NAS/backup placement, build archive/rollups/selected evidence, then safe local expiry and receiver recovery. Historical UX and annual-volume/restore qualification follow. Do not silently shorten published windows or erase annual evidence to meet a quota; pause expansion/intake before exhausting recovery reserves. Full bulk-data archival/replay is development-only, per David's clarification. The first non-destructive pilot verified all 1,828,156 journal records on NAS, added sampled format profiles, started the finite 72-hour study and fixed capacity-stop reporting. A temporary UAT safeguard pauses future beat scheduling below 30 GiB free. CT protection prevented a direct bind mount; it was left enabled and host-side NAS publication is used. No expiry, receiver guard increase, resize or production deployment occurred. Evidence: [RETENTION-PILOT-20261023.md](RETENTION-PILOT-20261023.md).
+
 ## Immediate next work
 
-1. Finish Phase 0 capability/dependency inventory and collector validation in DEV1.
-2. Run the actual UI audit and define screen hierarchy, component states and common investigation contracts.
-3. Produce the Overview, ASN, Prefix and Compare Routes wireframes and the2D/3D interaction prototype.
-4. Deliver the Phase 2 visual uplift in reviewable slices while data reliability work proceeds.
-5. Refine later phase effort and provider choices from the measured audit.
+1. Complete the fixed-budget growth/format/checkpoint study and annual cardinality forecast. Atomic provider history and observed-cohort hourly/daily summaries are now in a bounded UAT pilot; qualify ongoing backup coverage and quota. See [RETAINED-EVIDENCE-20261023.md](RETAINED-EVIDENCE-20261023.md).
+2. Implement verified archival/protection and safe local expiry, resume continuous RIS receivers within the local/NAS budgets, and repair the recorded interruption before expanding ingestion.
+3. Add periodic independent RIB reconciliation, database-failure/restart soak and serving concurrency limits.
+4. Expand active-measurement endpoint/network diversity and build evidence-linked incident correlation with persistence, contrary evidence and source-lineage rules.
+5. Complete rendered accessibility/mobile/NOC-display review, then qualify the exact release scope for production. Existing production authorization does not remove technical release gates.
 
 ## Reference specifications and provider documentation
 
@@ -251,3 +269,11 @@ These references informed capability boundaries; they are not claims of integrat
 - BMP, RFC7854: https://datatracker.ietf.org/doc/html/rfc7854
 - RIPE Atlas measurement definitions: https://atlas.ripe.net/docs/apis/rest-api-manual/measurements/creating-measurements/definitions/
 - Globalping supported measurement types: https://github.com/jsdelivr/globalping/blob/master/public/v1/spec.yaml
+
+## Provider history qualification — 2026-10-23
+
+The additive UAT capture retains Atlas/mesh/IODA revisions and collection cycles in the same transaction as latest evidence. Mesh samples are deduplicated across overlapping fetch windows; corrections are new versions. The first 728 cohort summaries are verified on NAS. Capture is finite and bounded, with explicit gaps at limits; summaries state unknown expected coverage. No global score, complete historical feed, annual capacity qualification, historical UI/API, journal expiry or receiver restart is implied. Full archive tooling remains development-only. Production application and native API/worker/frontend are unchanged.
+
+## Operational direction — 2026-10-24
+
+David held backup coverage and prioritized a self-imposed NAS quota, collection/validator repairs, journal rotation and resuming continuous RIS. Backup coverage is not a gate for this requested operating slice. Continuous RIS resumed in development at 00:27:37 UTC, managed quota/publication is active, and real Atlas/BGP/RPKI checks passed. The protected local detail window is 24 hours; private development NAS raw retention is 72 hours. Production promotion includes a separately running maintained-route receiver, with full archives remaining private to development. Existing gaps remain visible until actual replay completes. See [OPERATIONS-LIVE-20261024.md](OPERATIONS-LIVE-20261024.md) for controls, measured evidence and deployment state.

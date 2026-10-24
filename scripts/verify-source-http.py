@@ -7,9 +7,8 @@ def get(path,code=200):
  except urllib.error.HTTPError as e:
   assert e.code==code,(path,e.code,code)
 def main():
- data=get('/sources');assert data['health_score'] is None and len(data['sources'])==7
+ data=get('/sources');assert data['health_score'] is None and len(data['sources'])>=7
  print('SOURCE_STATES',[(s['id'],s['state'],s['records']) for s in data['sources']],flush=True)
- assert next(s for s in data['sources'] if s['id']=='routeviews')['state']=='unavailable'
  for path in ['/snapshot','/snapshot?family=6','/snapshot?asn=4288000245','/snapshot?prefix=2001:db8::/32']:
   d=get(path);assert d['health_score'] is None
   for route in d['routes']:
