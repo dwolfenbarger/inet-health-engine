@@ -26,3 +26,11 @@ Each phase must demonstrate a complete investigation using real evidence or a cl
 ## Validation
 
 `tests/test_issues.py` covers resource scoping, expected/transit/peer involvement, pinned pagination, explicit failures, stale measurement semantics and exact observation detail without invented prior paths. `scripts/qualify-issues.py` walks every live issue page and tests real flap/origin-change/withdrawal candidates, victim searches, prefix drilldowns and available measured changes. Set `INET_ISSUES_QA_URL` to the target `/api/v1/noc` base.
+
+## Validation result
+
+Release `6022ee173f58d94db28942027d94668c8a92d597` passed98 Python regressions in the native Python3.13 environment, the frontend build and changed-file ESLint. Live workflow checks covered all issue pages, exact observation details, expected/transit ASN searches, prefix drilldowns, measured evidence, invalid/expired scopes and desktop/mobile layout. Public-load and full accessibility qualification remain open.
+
+Detailed operational reports, timestamps, observation identifiers, screenshots and deployment/rollback records are retained privately in the project ledger and release workspace. They are not included in this public repository.
+
+Phase1 restores issue-to-evidence investigation. Broader charter acceptance remains open: continuous intake does not yet feed these detectors; prefix event history, event-time validation, confirmed incident correlation, recovery detection, impact inference and native probe-selected traceroute investigation remain unfinished. Source links to Atlas evidence do not replace Phase4. Serving catalogue refresh delays and cold queries remain operational constraints. The legacy globe-summary timeout and synthetic traceroute code are not repaired or exposed by this release.
