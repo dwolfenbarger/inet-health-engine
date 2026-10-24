@@ -1,4 +1,4 @@
-# Additional parser dependency for the opt-in MRT recovery service.
-# Kept separate from the native Celery source collectors.
+# Native maintained-routing recovery dependencies, verified on Python 3.13.
+# Install alongside the existing native service environment.
 pybgpkit==0.9.0
 pybgpkit-parser==0.18.0

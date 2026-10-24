@@ -1,4 +1,4 @@
-"""Install and resume the qualified UAT journal path. Does not manage backups."""
+"""Install and resume the qualified collector journal path. Does not manage backups."""
 import hashlib,json,os,re,shutil,socket,subprocess,sys
 from datetime import datetime,timezone
 from pathlib import Path
@@ -12,8 +12,6 @@ def run(args,timeout=600):
   print('STEP_FAILED',result.stderr[-3000:],flush=True)
   result.check_returncode()
  return result.stdout.strip()
-if run(['systemctl','show','inet-routing-stream','-p','ActiveState','--value']) not in {'inactive','failed'}:raise SystemExit('Receiver must be stopped at a committed boundary')
-if shutil.disk_usage('/').free<30*1024**3:raise SystemExit('Root reserve')
 for line in (ROOT/'.env').read_text().splitlines():
  if '=' in line and not line.lstrip().startswith('#'):
   k,v=line.split('=',1);os.environ[k.strip()]=v.strip().strip('"').strip("'")
@@ -21,6 +19,10 @@ u=urlsplit(os.environ['TIMESCALE_DSN']);db=u.path.removeprefix('/')
 if u.hostname not in {'localhost','127.0.0.1','::1'} or not re.fullmatch('[a-z][a-z0-9_]{0,62}',db):raise SystemExit('Local database only')
 if '--database-only' in sys.argv:
  print(db);raise SystemExit(0)
+if run(['systemctl','show','inet-routing-stream','-p','ActiveState','--value']) not in {'inactive','failed'}:raise SystemExit('Receiver must be stopped at a committed boundary')
+if shutil.disk_usage('/').free<30*1024**3:raise SystemExit('Root reserve')
+# Fail before changing storage if the separately pinned native MRT parser is absent.
+run([str(ROOT/'.venv/bin/python'),'-c','import bgpkit; import pybgpkit_parser'])
 marker=json.loads(Path('/etc/inet-health/journal-nas-ready.json').read_text())
 if marker.get('storage_id')!='e6a0939db1dd4a12a5dbec00ccf45296' or marker.get('admission_bytes')!=260*1024**3:raise SystemExit('NAS quota admission is not ready')
 if not CANARY.exists():
