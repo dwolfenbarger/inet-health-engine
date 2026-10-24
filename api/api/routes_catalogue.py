@@ -26,7 +26,9 @@ async def ensure_retained(pool,gen):
   raise HTTPException(409,'Browsing snapshot expired; refresh to continue.')
 
 async def matching_count(pool,g,base,args,asn,role,family,collector,prefix,ip,scope):
- if not any([asn,prefix,ip]) and family=='all' and collector=='all':return g['summary']['routes']
+ if not any([asn,prefix,ip]):
+  if family=='all' and collector=='all':return g['summary']['routes']
+  if 'facets' in g['summary']:return sum(x['routes'] for x in g['summary']['facets'] if (family=='all' or x['family']==int(family)) and (collector=='all' or x['collector']==collector))
  if asn and not prefix and not ip and family=='all' and collector=='all':
   column={'any':'routes','origin':'origins','transit':'transits','peer':'peers'}[role]
   return await pool.fetchval('SELECT '+column+' FROM inet_catalog.asns WHERE generation=$1 AND asn=$2',g['id'],asn) or 0
@@ -35,11 +37,23 @@ async def matching_count(pool,g,base,args,asn,role,family,collector,prefix,ip,sc
   cache=await get_redis();key=f"inet:catalogue-count:{g['id']}:{scope}";saved=await cache.get(key)
   if saved is not None:return int(saved)
  except Exception:cache=None
- total=await pool.fetchval('SELECT count(*) FROM ('+base+') matched',*args)
+ if asn and role in ('any','transit') and not ip:
+  keys,values=membership_plan(g,asn,role,family,collector,prefix)
+  total=await pool.fetchval('SELECT count(*) FROM inet_catalog.memberships WHERE '+' AND '.join(keys),*values)
+ else:total=await pool.fetchval('SELECT count(*) FROM ('+base+') matched',*args)
  if cache:
   try:await cache.setex(key,7200,str(total))
   except Exception:pass
  return total
+
+def membership_plan(g,asn,role,family,collector,prefix):
+ values=[g['id'],asn];keys=['generation=$1','asn=$2']
+ if role=='transit':keys.append('(roles & 2)<>0')
+ if family!='all':values.append(int(family));keys.append(f'family(prefix)=${len(values)}')
+ if collector!='all':
+  values.append([o['id'] for o in g['observers'] if o['collector']==collector]);keys.append(f'observer=ANY(${len(values)}::text[])')
+ if prefix:values.append(str(ip_network(prefix,strict=False)));keys.append(f'prefix=${len(values)}::text::cidr')
+ return keys,values
 
 def query_plan(gen,asn,role,family,collector,prefix,ip):
  values=[gen];conditions=['r.generation=$1']
@@ -90,6 +104,9 @@ async def routes(asn:int|None=Query(None,ge=1,le=4294967295),role:Role='any',fam
  pool=await get_pg_pool();g=await generation(pool,page[0] if page else generation_id)
  try:clauses,args=query_plan(g['id'],asn,role,family,collector,prefix,ip)
  except ValueError:raise HTTPException(422,'Enter a valid CIDR prefix or IP address.') from None
+ if 'facets' in g['summary'] and (family!='all' or collector!='all'):
+  ids=list({x['observer'] for x in g['summary']['facets'] if (family=='all' or x['family']==int(family)) and (collector=='all' or x['collector']==collector)})
+  args.append(ids);clauses.append(f'r.observer=ANY(${len(args)}::text[])')
  where=' AND '.join(clauses)
  # IP lookup selects the longest present match per viewpoint in the captured generation.
  base='SELECT r.* FROM inet_catalog.routes r WHERE '+where
@@ -98,10 +115,22 @@ async def routes(asn:int|None=Query(None,ge=1,le=4294967295),role:Role='any',fam
  total=await matching_count(pool,g,base,args,asn,role,family,collector,prefix,ip,scope)
  summary={'updates':total,'origins':g['summary']['origins'] if unfiltered else None,
   'prefixes':g['summary']['prefixes'] if unfiltered else None,'observers':g['summary']['observers'] if unfiltered else None}
- query='SELECT matched.*,prefix::text prefix_text FROM ('+base+') matched'
+ page_where=''
  if page:
-  args.extend(page[1:3]);query+=f' WHERE (observer,prefix)>(${len(args)-1}::text,${len(args)}::text::cidr)'
- args.append(limit+1);query+=f' ORDER BY observer,prefix LIMIT ${len(args)}'
+  args.extend(page[1:3]);page_where=f' WHERE (observer,prefix)>(${len(args)-1}::text,${len(args)}::text::cidr)'
+ args.append(limit+1)
+ if asn and role in ('any','transit') and not ip:
+  member_where,member_args=membership_plan(g,asn,role,family,collector,prefix)
+  if page:
+   member_args.extend(page[1:3]);member_where.append(f'(observer,prefix)>(${len(member_args)-1}::text,${len(member_args)}::text::cidr)')
+  member_args.append(limit+1)
+  query=('WITH page AS MATERIALIZED (SELECT observer,prefix FROM inet_catalog.memberships WHERE '
+   +' AND '.join(member_where)+f' ORDER BY observer,prefix LIMIT ${len(member_args)}) '
+   'SELECT r.*,r.prefix::text prefix_text FROM page p JOIN inet_catalog.routes r '
+   'ON r.generation=$1 AND r.observer=p.observer AND r.prefix=p.prefix ORDER BY r.observer,r.prefix')
+  args=member_args
+ else:
+  query='SELECT matched.*,prefix::text prefix_text FROM ('+base+') matched'+page_where+f' ORDER BY observer,prefix LIMIT ${len(args)}'
  rows=await pool.fetch(query,*args);more=len(rows)>limit;rows=rows[:limit]
  pairs=list(dict.fromkeys((r['prefix_text'],r['origin_asn']) for r in rows if r['origin_asn']))
  proof_rows=await pool.fetch("SELECT evidence_id,payload FROM source_evidence WHERE source='rpki-local' AND evidence_id=ANY($1::text[]) AND observed_at>now()-interval '60 minutes'",[f'{p}|{a}' for p,a in pairs])
@@ -111,11 +140,12 @@ async def routes(asn:int|None=Query(None,ge=1,le=4294967295),role:Role='any',fam
   async with httpx.AsyncClient(base_url='http://127.0.0.1:8323',timeout=3,limits=httpx.Limits(max_connections=4)) as client:
    answers=await asyncio.gather(*(validate(client,p,a) for p,a in missing))
   proofs.update({f'{p}|{a}':v for (p,a),v in zip(missing,answers) if v})
+ captured_observers={o['id']:o for o in g['observers']}
  evidence=[]
  for r in rows:
   path=decoded(r['path']);proof=proofs.get(f"{r['prefix_text']}|{r['origin_asn']}")
   evidence.append({'observer':r['observer'],'collector':r['collector'],'prefix':r['prefix_text'],'origin_asn':r['origin_asn'],
-   'peer_asn':r['peer_asn'],'time':r['event_at'],'as_path':path if all(type(x) is int for x in path) else [],'path_segments':path,
+   'peer_asn':r['peer_asn'],'peer_ip':captured_observers.get(r['observer'],{}).get('peer_ip'),'time':r['event_at'],'as_path':path if all(type(x) is int for x in path) else [],'path_segments':path,
    'attrs':decoded(r['attrs']),'evidence_id':r['evidence_id'],'change_type':{0:'snapshot',1:'archive update',2:'announcement'}[r['rank']],
    'rpki_status':proof['status'] if proof else 'unknown','rpki_validation':proof,'roles':{'origin':r['origin_asn']==asn,'transit':asn in r['transit'] if asn else False,'peer':r['peer_asn']==asn}})
  obs=await read_observers(pool)

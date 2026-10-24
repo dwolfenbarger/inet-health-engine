@@ -2,15 +2,23 @@
 import asyncio,json,sys,time,statistics
 from pathlib import Path
 sys.path.insert(0,'/opt/inet-journal-runtime/vendor')
-import asyncpg,httpx
+import asyncpg
+from contextlib import AsyncExitStack
+from urllib.request import urlopen
+from urllib.parse import urlencode
+from urllib.error import HTTPError
 async def main():
  c=await asyncpg.connect(database='inethealth',user='postgres',host='/var/run/postgresql',command_timeout=90)
  report={'checks':[],'timings':[]};started=time.monotonic()
- async with httpx.AsyncClient(base_url='http://127.0.0.1:8011/api/v1/noc/catalogue',timeout=30) as h:
+ async with AsyncExitStack():
   async def get(path,params=None,status=200):
-   t=time.monotonic();r=await h.get(path,params=params);elapsed=round(time.monotonic()-t,3)
-   if r.status_code!=status:raise AssertionError((path,params,r.status_code,r.text[:300]))
-   report['timings'].append({'path':path,'seconds':elapsed});return r.json()
+   def request():
+    try:r=urlopen('http://127.0.0.1:8011/api/v1/noc/catalogue'+path+'?'+urlencode(params or {}),timeout=30)
+    except HTTPError as e:r=e
+    with r:return r.status,r.read()
+   t=time.monotonic();code,body=await asyncio.to_thread(request);elapsed=round(time.monotonic()-t,3)
+   if code!=status:raise AssertionError((path,params,code,body[:300]))
+   report['timings'].append({'path':path,'seconds':elapsed});return json.loads(body)
   directory=await get('/asns',{'limit':100});g=directory['generation']['id'];report['generation']=g;report['summary']=directory['generation']['summary']
   expected=await c.fetchval('SELECT count(*) FROM inet_catalog.asns WHERE generation=$1',g)
   seen=[];page=directory
@@ -18,9 +26,13 @@ async def main():
    seen.extend(x['asn'] for x in page['asns'])
    if page['next_after'] is None:break
    page=await get('/asns',{'limit':100,'generation_id':g,'after':page['next_after']})
-  assert len(seen)==len(set(seen))==expected==directory['total'];report['checks'].append(f'all directory pages reconcile: {expected}')
+  assert len(seen)==len(set(seen))==expected==directory['total'];print('DIRECTORY',expected,flush=True);report['checks'].append(f'all directory pages reconcile: {expected}')
   chosen=await c.fetch('SELECT asn,routes,transits FROM inet_catalog.asns WHERE generation=$1 AND asn=ANY($2::bigint[]) ORDER BY asn',g,[13335,3356,1299,174,6939,15169,16509,2497,28624,133210,15547,30844])
   assert len(chosen)>=10;report['asns']=[]
+  quiet=await c.fetchval("SELECT asn FROM inet_catalog.asns WHERE generation=$1 AND origins>0 AND NOT EXISTS (SELECT 1 FROM bgp_updates b WHERE b.origin_asn=asn AND b.time>now()-interval '15 minutes') ORDER BY asn LIMIT 1",g)
+  assert quiet is not None
+  quiet_result=await get('/asns',{'q':str(quiet),'generation_id':g});assert quiet_result['total']==1
+  report['checks'].append(f'quiet ASN discoverable without recent sampled activity: AS{quiet}')
   for row in chosen:
    asn=row['asn'];detail=await get('/asns/'+str(asn),{'generation_id':g})
    assert detail['observed'] and detail['inventory']['routes']==row['routes']
