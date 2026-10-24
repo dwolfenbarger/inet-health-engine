@@ -8,3 +8,5 @@
 @media(max-width:700px){.operational-issues {padding:14px}.issue-kinds {grid-template-columns:repeat(2,minmax(0,1fr))}.issue-kinds button:first-child {grid-column:span 2}.issue-evidence {padding:12px}.issue-toolbar {align-items:flex-start;flex-direction:column}.issue-facts {grid-template-columns:1fr 1fr}.issue-facts strong {font-size:18px}}
 
 .issue-evidence .table-scroll {max-height:480px;overflow:auto}.issue-evidence th {position:sticky;top:0;background:#192a38;z-index:1}#routing-evidence {scroll-margin-top:18px}
+
+.live-noc .issue-path .live-link {display:inline-block}.issue-path>span {white-space:nowrap}
