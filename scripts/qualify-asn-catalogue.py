@@ -1,5 +1,5 @@
 """Read-only qualification against a published candidate and its own immutable scope."""
-import asyncio,json,sys,time,statistics
+import asyncio,json,sys,time,statistics,os
 from pathlib import Path
 sys.path.insert(0,'/opt/inet-journal-runtime/vendor')
 import asyncpg
@@ -13,7 +13,7 @@ async def main():
  async with AsyncExitStack():
   async def get(path,params=None,status=200):
    def request():
-    try:r=urlopen('http://127.0.0.1:8011/api/v1/noc/catalogue'+path+'?'+urlencode(params or {}),timeout=30)
+    try:r=urlopen(os.environ.get('INET_CATALOGUE_QA_URL','http://127.0.0.1:8011/api/v1/noc/catalogue')+path+'?'+urlencode(params or {}),timeout=30)
     except HTTPError as e:r=e
     with r:return r.status,r.read()
    t=time.monotonic();code,body=await asyncio.to_thread(request);elapsed=round(time.monotonic()-t,3)

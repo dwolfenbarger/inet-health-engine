@@ -43,3 +43,11 @@ Builder now integrates both partitions atomically; retainlast2, cleanupretriesbe
 ## Followup qualification checkpoint
 
 Sorted membership querypassed12realASNidentity/rolelookups andall13,343AS13335originentries acrosspages, plusquietASNandinvalid/expiredcursorchecks. Runv5thenfailedIPv6-widelookupfromorderedscanningofirrelevantIPv4views. Backfilledexactgenerationobserver/familyfacets andupdatedAPItochooseonlymatchingviewsandreadfull-scopefamily/collectortotalsfromfacets. Runv6iscurrentfinalcheck. Theseareactualqueryfixes; noAPIorproductionacceptanceclaimuntilv6result. Fullfacetbackfillcompleted04:11:52UTC. LedgerASNInvestigationReleasesectionrecordsrestoredaccessandUATstatus.
+
+## Final production checkpoint — October 24, 2026, 04:58 UTC
+
+The preceding WIP entries are historical. UAT and production now run application `40e5b07e694a0a21af26a824bf4e8cd1db8805ce`. UAT qualifier v6 passed; production candidate and deployed native qualification both passed. Ninety Python tests, frontend build and changed-file lint passed. Production includes 86,975 observed ASNs, 1,373,564 unique prefixes and 3,771,374 route entries across five views. The full native 1,006-request test had p95 0.322s and maximum 1.038s; all directory entries and all 13,341 Cloudflare origin rows reconcile.
+
+Production browser operator workflows, IPv6, four-byte ASN, absent ASN, topology navigation, route pagination, comparison and narrow layout are verified. Integrated UAT generation 3 published successfully and the old generation-2 cursor survived unchanged. Both catalogue timers are enabled. Production generation 2 is building; temporary candidate APIs are stopped. Operational collectors and journal rotation continue. Production rollback: `/srv/inet-health-backups/20261024T044822Z`; UAT rollback: `/srv/inet-health-backups/20261024T041639Z`.
+
+Canonical evidence and remaining limits: `ASN-INVESTIGATION-RELEASE.md` and `PRODUCTION-USABILITY-PRIORITY.md`. Initial builds took 26–33 minutes; capture age can exceed an hour between refreshes. First cold IP lookup took 10.885s before a 0.111s repeat; warm native timings are not public-load certification. Faster refresh, richer adjacency/history, incident/performance integration and the broader global NOC charter remain open. New feeds, backup work and retention expansion remain held.
