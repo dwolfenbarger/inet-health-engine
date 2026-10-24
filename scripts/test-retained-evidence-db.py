@@ -16,6 +16,8 @@ async def test(db):
   CREATE TABLE source_status(source text PRIMARY KEY,last_attempt timestamptz,last_success timestamptz,last_observation timestamptz,state text,records bigint,detail jsonb,error_code text);''')
   migration=(ROOT/'docker/migrations/20261024-retained-evidence.sql').read_text()
   await conn.execute(migration);await conn.execute(migration)
+  await conn.execute((ROOT/'docker/migrations/20261024-capture-backpressure.sql').read_text())
+  await conn.execute((ROOT/'docker/migrations/20261024-capture-credit-accounting.sql').read_text())
   at=datetime(2026,10,23,10,tzinfo=timezone.utc)
   async def put(source,ident,payload):
    await conn.execute('''INSERT INTO source_evidence VALUES($1,$2,$3,4288000245,6,'test',$4::jsonb)
@@ -65,6 +67,12 @@ async def test(db):
   await conn.execute("UPDATE inet_retention.policy SET max_records=2000000")
   await put('atlas','oversized',{'data':'x'*70000})
   await check(await conn.fetchval("SELECT skipped_candidates FROM inet_retention.gaps WHERE reason='record_size_limit'")==1,'oversized record gap')
+  other=await asyncpg.connect(database=db,user='postgres',host='/var/run/postgresql')
+  async with other.transaction():
+   await other.fetchval("SELECT pg_advisory_xact_lock(hashtext('inet-retention-capture-budget'))")
+   await put('ioda','busy-provider',{'native':'candidate'})
+   await check(await conn.fetchval("SELECT skipped_candidates FROM inet_retention.gaps WHERE reason='concurrent_capture_busy'")==1,'busy history does not block current provider write')
+  await other.close()
   await conn.execute('GRANT INSERT,UPDATE,SELECT ON source_evidence TO inetuser')
   await conn.execute("SET ROLE inetuser")
   await put('atlas','application-write',p)

@@ -1,5 +1,6 @@
 """Read selected, maintained unicast route views without claiming global health."""
-import json
+import asyncio,json,os
+import httpx
 from datetime import datetime,timezone
 from ipaddress import ip_address,ip_network
 from typing import Literal
@@ -74,7 +75,7 @@ async def routes(observer:str|None=Query(None,max_length=100),
           FROM routing_routes r JOIN routing_observers o ON o.id=r.observer
           LEFT JOIN source_evidence e ON e.source='rpki-local'
             AND e.evidence_id=r.prefix::text||'|'||r.origin_asn::text
-            AND e.observed_at>now()-interval '20 minutes'
+            AND e.observed_at>now()-interval '60 minutes'
           WHERE r.epoch=o.epoch AND r.generation=o.generation
             AND ($1::text IS NULL OR o.id=$1) AND ($2='all' OR o.source=$2)
             AND ($3::text IS NULL OR r.prefix=$3::text::cidr)
@@ -83,12 +84,20 @@ async def routes(observer:str|None=Query(None,max_length=100),
             AND ($6='all' OR family(r.prefix)::text=$6)
             AND ($7 OR r.present) AND ($9='all' OR o.collector=$9) ORDER BY '''+order+' LIMIT $8'
         rows=await pool.fetch(sql,observer,source,prefix,ip,asn,family,include_withdrawn,limit,collector)
-        evidence=[]
+        evidence=[];lookups={}
+        if prefix or ip or asn is not None:
+            pairs=list(dict.fromkeys((r['prefix_text'],r['origin_asn']) for r in rows if r['origin_asn'] and not r['rpki_validation']))[:8]
+            from api.local_validation import validate
+            async with httpx.AsyncClient(base_url=os.environ.get('ROUTINATOR_URL','http://127.0.0.1:8323'),timeout=3,
+              limits=httpx.Limits(max_connections=4,max_keepalive_connections=4)) as client:
+                answers=await asyncio.gather(*(validate(client,p,a) for p,a in pairs))
+            lookups=dict(zip(pairs,answers))
         for row in rows:
             path=json.loads(row['path']) if isinstance(row['path'],str) else row['path']
             attrs=json.loads(row['attrs']) if isinstance(row['attrs'],str) else row['attrs']
             proof=row['rpki_validation']
             if isinstance(proof,str):proof=json.loads(proof)
+            if proof is None:proof=lookups.get((row['prefix_text'],row['origin_asn']))
             evidence.append({'observer':row['observer'],'source':row['source'],'collector':row['collector'],
                 'peer_ip':row['peer_ip'],'peer_asn':row['peer_asn'],'prefix':row['prefix_text'],
                 'time':row['event_at'],'origin_asn':row['origin_asn'],
@@ -106,6 +115,7 @@ async def routes(observer:str|None=Query(None,max_length=100),
             'limitations':['Observer continuity describes reconstruction, not reachability or global Internet health.',
               'Snapshot time differs from the route last-change time retained in raw attributes.',
               'MRT publication introduces delay. An unrepaired gap leaves the view uncertain.',
+              'Focused prefix/IP/ASN investigations request at most eight missing origin validations from the local validator; other uncached validations remain unknown.',
               'No matching route in these selected views is not an Internet-wide withdrawal or all-clear.',
               'ADD_PATH is not reconstructed; archive audit refuses selected ADD_PATH data.']}
     except Exception:

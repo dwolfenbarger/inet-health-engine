@@ -121,7 +121,7 @@ async def snapshot(
         try:
             evidence_rows=await pool.fetch("""SELECT evidence_id,observed_at,payload FROM source_evidence
                 WHERE source='rpki-local' AND evidence_id=ANY($1::text[])
-                  AND observed_at>now()-interval '20 minutes'""",
+                  AND observed_at>now()-interval '60 minutes'""",
                 [f"{r['prefix']}|{r['origin_asn']}" for r in routes if r['origin_asn']])
         except Exception:
             raise HTTPException(503,'Current origin validation evidence unavailable') from None
@@ -153,7 +153,7 @@ async def snapshot(
                         "Congestion, packet loss and latency are not established by this BGP feed; inspect separate measurement evidence.",
                         "Historical AS paths before this release may have lost repeated ASNs.",
                         "Historical candidates without collector attribution are excluded from collector-filtered results.",
-                        "Collection is a bounded sample: up to 50,000 updates per 60-second window, scheduled every 90 seconds.",
+                        "Collection is a bounded sample: up to 10,000 updates per 60-second window, scheduled every 90 seconds.",
                         "The next_hop_raw field preserves multi-address IPv6 attributes; next_hop is null when not a single address.",
                         "Complex AS_SET paths cannot be represented by the current schema and have an empty AS sequence."],
         "metadata_source": "https://ris.ripe.net/docs/route-collectors/",
@@ -164,7 +164,7 @@ async def snapshot(
 SOURCE_CATALOG = [
     ('ris','RIPE RIS Live','Routing','RIS','https://ris-live.ripe.net/',240),
     ('ris-continuous','RIS selected continuous observer','Routing / maintained RIB','RIS; overlaps the sampled RIS source','https://ris-live.ripe.net/',180),
-    ('rpki-local','Local RPKI validator','Origin authorization','RIR signed ROAs','https://routinator.docs.nlnetlabs.nl/',1200),
+    ('rpki-local','Local RPKI validator','Origin authorization','RIR signed ROAs','https://routinator.docs.nlnetlabs.nl/',3600),
     ('atlas','RIPE Atlas','Reachability / latency / DNS','Atlas probes','https://atlas.ripe.net/',1200),
     ('atlas-mesh','RIPE Atlas anchor mesh','Measured path baselines','Atlas probes; shared lineage with K-root built-ins','https://atlas.ripe.net/',1200),
     ('ioda','IODA','Outage candidates','RIS + RouteViews / active probing / telescope','https://ioda.inetintel.cc.gatech.edu/',1200),

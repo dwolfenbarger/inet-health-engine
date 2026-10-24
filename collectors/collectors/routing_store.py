@@ -62,11 +62,20 @@ async def commit_messages(observer,frames):
         for raw,received in frames:
             at,ident,changes=ris_changes(raw,observer)
             seq=row['sequence']+1
-            inserted=await conn.fetchval('''INSERT INTO routing_messages(observer,message_id,received_at,event_at,sequence,payload)
-                VALUES($1,$2,$3,$4,$5,$6::jsonb) ON CONFLICT DO NOTHING RETURNING sequence''',
-                observer['id'],ident,received,at,seq,json.dumps(raw))
+            inserted=await conn.fetchval('''INSERT INTO routing_message_keys(observer,message_id,received_at,event_at,sequence)
+                VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING RETURNING sequence''',
+                observer['id'],ident,received,at,seq)
+            if inserted is not None:
+                await conn.execute('''INSERT INTO routing_messages(observer,message_id,received_at,event_at,sequence,payload)
+                    VALUES($1,$2,$3,$4,$5,$6::jsonb)''',observer['id'],ident,received,at,seq,json.dumps(raw))
             if inserted is None:continue
             row['sequence']=seq;row['messages']+=1;row['updates']+=len(changes)
+            if row.get('dedup_floor_at') is not None and at<row['dedup_floor_at']:
+                # The bounded dedup horizon is explicit. Preserve the frame for
+                # audit, but an old OPEN/UPDATE cannot reset or mutate current state.
+                await conn.execute('''INSERT INTO routing_gaps(id,observer,from_at,until_at,reason,state)
+                    VALUES($1,$2,$3,$4,'LateBeyondDedupHorizon','waiting_archive')''',uuid.uuid4(),observer['id'],at,row['event_at'] or at)
+                continue
             data=raw['data'];kind=data['type']
             if kind in ['OPEN','NOTIFICATION'] or (kind=='RIS_PEER_STATE' and data.get('state')=='down' and row['peer_state']!='down'):
                 row['epoch']+=1;row['generation']=uuid.uuid4();row['baseline_state']='required';row['reset_at']=at

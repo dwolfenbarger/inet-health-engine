@@ -41,8 +41,10 @@ class JournalCoverage:
         return dict(self.counts)
 
 class Bundle:
-    def __init__(self,root,*,environment='development',max_raw=4*1024**3,max_stored=1024**3,part_raw=32*1024**2):
+    def __init__(self,root,*,environment='development',max_raw=4*1024**3,max_stored=1024**3,part_raw=32*1024**2,purpose='profile'):
         if environment!='development':raise ValueError('Full archive profiles are development-only')
+        if purpose not in {'profile','journal'}:raise ValueError('Unknown archive purpose')
+        self.purpose=purpose
         self.root=Path(root);self.root.mkdir(parents=True,exist_ok=False)
         self.max_raw=max_raw;self.max_stored=max_stored;self.part_raw=part_raw
         self.raw=0;self.stored=0;self.objects=[];self.writer=None
@@ -80,6 +82,9 @@ class Bundle:
         manifest={**metadata,'schema':'inet-retention-profile-v1','environment':'development',
             'complete':True,'expiry_eligible':False,'created_at':datetime.now(timezone.utc).isoformat(),
             'raw_bytes':self.raw,'stored_bytes':self.stored,'objects':self.objects}
+        if self.purpose=='journal':
+            manifest.update({'schema':'inet-journal-segment-v1','local_retirement_policy':'verified-receipt-and-24h'})
+            manifest.pop('expiry_eligible')
         atomic_json(self.root/'manifest.json',manifest)
         return manifest
 
@@ -88,9 +93,10 @@ def verify(root,*,max_raw=4*1024**3,max_stored=1024**3):
     if manifest_path.is_symlink():raise ValueError('Symlink manifest refused')
     if manifest_path.stat().st_size>2*1024**2:raise ValueError('Manifest size bound')
     manifest=json.loads(manifest_path.read_text())
-    if manifest.get('schema')!='inet-retention-profile-v1' or manifest.get('environment')!='development' or manifest.get('complete') is not True:
+    if manifest.get('schema') not in {'inet-retention-profile-v1','inet-journal-segment-v1'} or manifest.get('environment')!='development' or manifest.get('complete') is not True:
         raise ValueError('Unqualified development manifest')
-    if manifest.get('expiry_eligible') is not False:raise ValueError('Pilot cannot qualify deletion')
+    if manifest['schema']=='inet-retention-profile-v1' and manifest.get('expiry_eligible') is not False:raise ValueError('Pilot cannot qualify deletion')
+    if manifest['schema']=='inet-journal-segment-v1' and manifest.get('local_retirement_policy')!='verified-receipt-and-24h':raise ValueError('Journal retirement policy differs')
     coverage=JournalCoverage(manifest['journal_expected']) if manifest.get('journal_expected') is not None else None
     raw=stored=rows=0;seen=set();datasets=Counter()
     for item in manifest['objects']:

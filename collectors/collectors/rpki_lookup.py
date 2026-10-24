@@ -8,7 +8,7 @@ This module maintains a hot Redis cache of those records and provides a
 synchronous lookup that adds <1ms to anomaly detection per BGP update.
 
 Cache key:  rpki:v2:{prefix}:{origin_asn}  →  "valid" | "invalid" | "not-found"
-TTL:        at most 20 minutes from the validated snapshot; versioned local-validator keys
+TTL:        at most 60 minutes from completed validation; versioned local-validator keys
 
 Falls back to "unknown" if Redis is unavailable or prefix not cached.
 The collector-rpki container populates this cache via write_rpki_cache().

@@ -7,16 +7,22 @@ from collectors.config import settings
 from collectors.db import get_pg_pool,close_pg_pool
 from collectors.routing_store import register,open_gap,commit_messages
 from collectors.routing_stop import request_stop,stop_reason
+from collectors.journal_rotation import usage
 
 MAX_FRAME=1024*1024
 STOP=None
 
 async def capacity():
-    if shutil.disk_usage('/').free<20*1024**3:raise RuntimeError('DiskCapacityPause')
     pool=await get_pg_pool()
     async with pool.acquire() as conn:
-        size=await conn.fetchval("SELECT pg_total_relation_size('routing_messages')")
-    if size>2*1024**3:raise RuntimeError('JournalCapacityPause')
+        policy=await conn.fetchrow('SELECT * FROM routing_journal_policy WHERE id')
+        if not policy or not policy['enabled']:raise RuntimeError('JournalRotationNotEnabled')
+        if shutil.disk_usage('/').free<policy['root_reserve']:raise RuntimeError('DiskCapacityPause')
+        sizes=await usage(conn)
+        if sizes['hot_bytes']>policy['hot_limit']:raise RuntimeError('JournalCapacityPause')
+        if sizes['key_bytes']>policy['key_limit']:raise RuntimeError('DedupCapacityPause')
+        if not await conn.fetchval("SELECT EXISTS(SELECT 1 FROM routing_journal_segments WHERE from_at<=now() AND until_at>now() AND retired_at IS NULL AND name LIKE 'routing_messages_p%')"):
+            raise RuntimeError('JournalPartitionUnavailable')
 
 async def receive(observer,queue,stop):
     reason='Disconnected'

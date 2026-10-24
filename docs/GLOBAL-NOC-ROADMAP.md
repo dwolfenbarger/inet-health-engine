@@ -1,5 +1,5 @@
 # INET Health: Global NOC product and UI/UX roadmap
-Version: 1.5 | Updated: 2026-10-23 | Prepared by OpenAI Codex
+Version: 1.6 | Updated: 2026-10-23 | Prepared by OpenAI Codex
 
 ## Charter and planning status
 
@@ -244,7 +244,7 @@ Use small reviewed vertical slices through DEV1 -> UAT -> separately approved PR
 
 ## Twelve-month history and analysis
 
-The current budget-constrained proposal is [RETENTION-150G-350G-PLAN.md](RETENTION-150G-350G-PLAN.md), version 2.2. David set 150 GiB of container storage plus 350 GiB of attached NAS. This supersedes the earlier full-detail annual retention policy and multi-terabyte estimate. Current containers remain 200 GiB PROD/100 GiB UAT and no NAS mount was observed; this document neither shrinks filesystems nor attaches storage.
+The current budget-constrained proposal is [RETENTION-150G-350G-PLAN.md](RETENTION-150G-350G-PLAN.md), version 2.3. David set 150 GiB of container storage plus 350 GiB of attached NAS. This supersedes the earlier full-detail annual retention policy and multi-terabyte estimate. Current containers remain 200 GiB PROD/100 GiB UAT and no NAS mount was observed; this document neither shrinks filesystems nor attaches storage.
 
 Target: twelve months of trends, incident history, selected evidence and periodic checkpoint comparisons. Routine raw/normalized detail is approximately 24 hours local and initially 72 hours on NAS, targeting seven days only after compression/burst profiling. Global/regional hourly trends and daily ASN summaries span twelve months; hourly ASN history spans 90 days, with a bounded watchlist cohort retained hourly for the year. Older arbitrary route replay and full new-detector reanalysis are unavailable after routine raw expiry unless their evidence was selected and retained.
 
@@ -273,3 +273,7 @@ These references informed capability boundaries; they are not claims of integrat
 ## Provider history qualification — 2026-10-23
 
 The additive UAT capture retains Atlas/mesh/IODA revisions and collection cycles in the same transaction as latest evidence. Mesh samples are deduplicated across overlapping fetch windows; corrections are new versions. The first 728 cohort summaries are verified on NAS. Capture is finite and bounded, with explicit gaps at limits; summaries state unknown expected coverage. No global score, complete historical feed, annual capacity qualification, historical UI/API, journal expiry or receiver restart is implied. Full archive tooling remains development-only. Production application and native API/worker/frontend are unchanged.
+
+## Operational direction — 2026-10-24
+
+David held backup coverage and prioritized a self-imposed NAS quota, collection/validator repairs, journal rotation and resuming continuous RIS. Backup coverage is not a gate for this requested operating slice. Continuous RIS resumed in development at 00:27:37 UTC, managed quota/publication is active, and real Atlas/BGP/RPKI checks passed. The protected local detail window is 24 hours; private development NAS raw retention is 72 hours. Production promotion includes a separately running maintained-route receiver, with full archives remaining private to development. Existing gaps remain visible until actual replay completes. See [OPERATIONS-LIVE-20261024.md](OPERATIONS-LIVE-20261024.md) for controls, measured evidence and deployment state.

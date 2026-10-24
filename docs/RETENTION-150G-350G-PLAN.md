@@ -1,6 +1,6 @@
 # Retention and analysis within 150 GiB local + 350 GiB NAS
 
-Version 2.2 | 2026-10-23 | Prepared by OpenAI Codex
+Version 2.3 | 2026-10-23 | Prepared by OpenAI Codex
 
 ## Goal and changed scope
 
@@ -150,3 +150,7 @@ A bounded UAT qualification now preserves provider revisions atomically with lat
 The 72-hour capture policy ends October 26 at 23:26:53 UTC and caps accounted serialized content at 512 MiB / two million versions. This byte allowance includes an accounting overhead but is not an exact PostgreSQL disk quota; relation size, WAL and root reserve still require monitoring. Limits record explicit gaps while latest-evidence collection continues. Hourly/daily observed-cohort summaries are stored separately with correction versions, sample/packet counts, unknown coverage, and a processing watermark. No age expiry is enabled.
 
 The first seed produced 700 hourly plus 28 daily mesh summaries; 728 summary records serialized to 681,554 bytes and compressed to 20,284 bytes, verified locally and on NAS. This is a small seed result, not a twelve-month cardinality forecast. Details, independent-backup proof status and outstanding gates are maintained in [RETAINED-EVIDENCE-20261023.md](RETAINED-EVIDENCE-20261023.md).
+
+## Operational direction — 2026-10-24
+
+David held backup coverage and prioritized a self-imposed NAS quota, collection/validator repairs, journal rotation and resuming continuous RIS. Backup coverage is not a gate for this requested operating slice. Continuous RIS resumed in development at 00:27:37 UTC, managed quota/publication is active, and real Atlas/BGP/RPKI checks passed. The protected local detail window is 24 hours; private development NAS raw retention is 72 hours. Production promotion includes a separately running maintained-route receiver, with full archives remaining private to development. Existing gaps remain visible until actual replay completes. See [OPERATIONS-LIVE-20261024.md](OPERATIONS-LIVE-20261024.md) for controls, measured evidence and deployment state.
