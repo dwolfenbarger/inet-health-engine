@@ -258,3 +258,6 @@ router.include_router(routing_router)
 
 from api.routes_coverage import router as coverage_router
 router.include_router(coverage_router)
+
+from api.routes_catalogue import router as catalogue_router
+router.include_router(catalogue_router)
