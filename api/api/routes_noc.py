@@ -84,7 +84,7 @@ async def snapshot(
             FROM bgp_anomalies
             WHERE time > NOW() - make_interval(mins => $1)
               AND source LIKE 'ris/%'
-              AND ($2::bigint IS NULL OR origin_asn = $2)
+              AND ($2::bigint IS NULL OR origin_asn = $2 OR expected_asn = $2)
               AND ($3::text IS NULL OR affected_prefix = $3)
               AND ($4 = 'all' OR ($4 = '6') = (position(':' in affected_prefix) > 0))
               AND ($5 = 'all' OR source = $6)
@@ -261,3 +261,6 @@ router.include_router(coverage_router)
 
 from api.routes_catalogue import router as catalogue_router
 router.include_router(catalogue_router)
+
+from api.routes_issues import router as issues_router
+router.include_router(issues_router)

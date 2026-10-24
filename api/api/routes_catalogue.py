@@ -177,8 +177,8 @@ async def detail(asn:int,generation_id:int|None=Query(None,ge=1)):
     await cache.setex(key,86400,json.dumps(metadata))
  except Exception:pass
  # Recent candidates retain source evidence and do not imply confirmed incident/recovery.
- signals=await pool.fetch("SELECT time,event_type,affected_prefix,origin_asn,severity,confidence,source FROM bgp_anomalies WHERE origin_asn=$1 AND time>now()-interval '1 hour' AND source LIKE 'ris/%' ORDER BY time DESC LIMIT 20",asn)
+ signals=await pool.fetch("SELECT time,event_type,affected_prefix,origin_asn,severity,confidence,source FROM bgp_anomalies WHERE (origin_asn=$1 OR expected_asn=$1) AND time>now()-interval '1 hour' AND source LIKE 'ris/%' ORDER BY time DESC LIMIT 20",asn)
  await ensure_retained(pool,g['id'])
  return {'generation':g,'observed':row is not None,'inventory':dict(row) if row else None,'metadata':metadata,
-  'signals':[dict(r) for r in signals],'signals_scope':'Latest 20 sampled origin candidates in one hour; absence is not an all-clear.',
+  'signals':[dict(r) for r in signals],'signals_scope':'Latest 20 sampled observed/expected origin candidates in one hour; absence is not an all-clear.',
   'performance_scope':'Measured paths match known endpoints only. Transit appearance does not establish measured ASN performance.'}
