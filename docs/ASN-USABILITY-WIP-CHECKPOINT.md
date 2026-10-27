@@ -1,0 +1,53 @@
+# ASN usability implementation checkpoint — 2026-10-24 UTC
+
+Implementation remains incomplete and is NOT deployed to production. Controlling acceptance checklist: PRODUCTION-USABILITY-PRIORITY.md. Do not claim that this candidate meets the charter or production acceptance.
+
+## Access interruption
+
+Vengeance MCP returned HTTP403 `audit_unavailable`, next_action `stop_and_review_access`, on the attempted integrity-checked write of C:/ai/inet-global-20261022/asn-fix-writer.py. Stopped remote operations as instructed. Restore connector audit service/access before continuing. No alternate access route was attempted.
+
+## Durable remote work
+
+C:/ai/inet-health-routing-20261023, branch openai/continuous-routing, base 06ef67d9d8ebe0d090b5039bc74f9c4094b012c5, has uncommitted initial catalogue migration/builder/API, directory UI, route pagination and tests. Draft PR7 exists but these changes have not been committed/pushed. Production remains c8c108fb9510e986e7d686ca6955b0c05705c48f.
+
+Applied additive inet_catalog schema ONLY to UAT CT554. The one-shot inet-asn-build-qualification.service was active at the last successful check, with only its start line in the journal. Its final result is UNKNOWN. Candidate directory /opt/inet-asn-candidate. Do not start another builder until checking its state and PostgreSQL activity. No recurring catalogue timer installed. Existing live collection was not intentionally stopped.
+
+## Local-only latest fixes
+
+The current frontend/src/live/LiveNOC.tsx removes two narrowed-type-invalid ternaries in the sampled origin panel and trims extra EOF blank line. ASNInventory.tsx adds request-key gating to avoid showing previous filters' results while loading, and labels detail capture time. These last fixes did NOT transfer because access failed. Earlier remote build failed TS2367 at LiveNOC line133; it must be rerun after transferring fixes. Python compileall passes locally. Native dependency tests, full frontend build, API integration, rendered QA and production acceptance remain pending.
+
+## Resume checklist
+
+1. Inspect UAT builder journal, activity, duration, free space and actual derived relation size. Initial builder statement timeout is 900 seconds and temp limit4GiB; verify transaction rollback if failed. Copy/index of millions of routes needs qualification.
+2. Transfer latest local files with scripts/pack-transfer.py and files_write SHA gate. Rebuild frontend and lint changed files. Candidate API/tests/QA server also need recopy to UAT; scripts/serve-catalogue-qa.py binds127.0.0.1:8011 and loads private native .env internally.
+3. Fix catalogue storage budgeting before production: current guard checks existing12GiB but does not reserve full incoming generation. Keep last2 published versions, guard root reserve35GiB, and allow safe expiry of derived copies without changing source evidence.
+4. Ensure catalogue expiry during a request cannot silently return empty200; use a consistent request transaction or final generation recheck. Improve filtered counts with existing per-ASN aggregates/caching and benchmark heavy transit lookups. Ensure numeric path ASNs are within1..4294967295.
+5. Test all cursor contracts, role filters, longest-prefix search, metadata lookup/failure, snapshot expiry and directory totals. Exercise ten real ASNs, beyond200 routes, IPv6 and four-byte identities. Benchmark while collection runs. Current test file has four contract tests only.
+6. Qualify/install bounded periodic builder, then real UAT rendered workflows. Preserve source/filter context across navigation and label map geography honestly. Full adjacency/detail and visual integration acceptance still open.
+7. Commit/push exact tested release, use guarded deployment with worker drain and rollback; verify same workflows in production. Update ledger and controlling checklist with actual results. No backups or new feeds requested.
+
+Remote ledger could not be updated after access interruption. This checkpoint is local and must be reconciled into the repository and project ledger when access returns.
+
+## Access restored and qualification resumed
+
+On David's Retry, ledger, shell and file writes succeeded. Connected Chrome browser also opens UAT correctly; prior extension/certificate blocker no longer applies to this browser. The first build timed out at900s and rolled back completely (no generations or partitions). Revised bulk load copied3,771,205 eligible rows in282.18s; indexing/aggregation qualification still pending at this checkpoint. Current candidate frontend builds and changed-file lint passes. All85Python regressions pass with complete candidate scripts present. None of this constitutes production acceptance. Latest local fixes transferred to Windows; running UAT build uses the second builder revision, prior to added post-copy/post-index budget checks. Candidate loopback API8011 active underinet-catalogue-qa.
+
+## First real UAT catalogue and browser checks
+
+UAT native candidate80cceca deployed after active/reserved/scheduled zero; rollback/srv/inet-health-backups/20261024T035055Z. Generation2 captured03:39UTC published03:52UTC:3,771,205routes,1,373,396unique prefixes,86,589originASNs,86,972all-roleASNs,fiveviewpoints. Derived route copy/index4,293,836,800bytes. Complete directory traversal reconciled86,972entries. Browser showed actual Cloudflare identity,13,343origin and19,297transit route entries; traversed transit rows beyond200, navigated topology hopAS2497, and compared1.1.1.1 acrossthreeviewpoints. Narrow390px viewport has no page overflow, wide tables scroll internally. UTC consistency/loading labels subsequently improved.
+
+Qualification revealed ordered route scanning timeout forAS15547; materializing all match keys also failedAS174. Added partitioned sorted inet_catalog.memberships index; UAT generation2 backfill14,276,086ASN/route associations in312s, then API uses narrow indexed keys before fetching100full records. Full regression87tests pass; changed-filelint and frontendbuild pass. Live qualifier v5 is the first attempt with the membership index; inspect its result, do not rely on earlierfailedruns. CandidateAPI8011 updated; nativeUAT8000 still80cceca untilfollowupcommitpromotion. Production stillc8c108f and unchanged.
+
+Builder now integrates both partitions atomically; retainlast2, cleanupretriesbeforeadmission,24GiBpeakderivedbudget, incomingreservationatleast8GiB,35GiBrootreserve,4GiBtemp/32MiBworkmem/900sstatementlimit. Installer revised to feed migration through root stdin and copy runtime script under/opt/inet-journal-runtime/asn because postgres cannot traverseDavid's private home. These finalbuilder/installerrevisions require actualnextgenerationqualification. No timer installedyet.
+
+## Followup qualification checkpoint
+
+Sorted membership querypassed12realASNidentity/rolelookups andall13,343AS13335originentries acrosspages, plusquietASNandinvalid/expiredcursorchecks. Runv5thenfailedIPv6-widelookupfromorderedscanningofirrelevantIPv4views. Backfilledexactgenerationobserver/familyfacets andupdatedAPItochooseonlymatchingviewsandreadfull-scopefamily/collectortotalsfromfacets. Runv6iscurrentfinalcheck. Theseareactualqueryfixes; noAPIorproductionacceptanceclaimuntilv6result. Fullfacetbackfillcompleted04:11:52UTC. LedgerASNInvestigationReleasesectionrecordsrestoredaccessandUATstatus.
+
+## Final production checkpoint — October 24, 2026, 04:58 UTC
+
+The preceding WIP entries are historical. UAT and production now run application `40e5b07e694a0a21af26a824bf4e8cd1db8805ce`. UAT qualifier v6 passed; production candidate and deployed native qualification both passed. Ninety Python tests, frontend build and changed-file lint passed. Production includes 86,975 observed ASNs, 1,373,564 unique prefixes and 3,771,374 route entries across five views. The full native 1,006-request test had p95 0.322s and maximum 1.038s; all directory entries and all 13,341 Cloudflare origin rows reconcile.
+
+Production browser operator workflows, IPv6, four-byte ASN, absent ASN, topology navigation, route pagination, comparison and narrow layout are verified. Integrated UAT generation 3 published successfully and the old generation-2 cursor survived unchanged. Both catalogue timers are enabled. Production generation 2 is building; temporary candidate APIs are stopped. Operational collectors and journal rotation continue. Production rollback: `/srv/inet-health-backups/20261024T044822Z`; UAT rollback: `/srv/inet-health-backups/20261024T041639Z`.
+
+Canonical evidence and remaining limits: `ASN-INVESTIGATION-RELEASE.md` and `PRODUCTION-USABILITY-PRIORITY.md`. Initial builds took 26–33 minutes; capture age can exceed an hour between refreshes. First cold IP lookup took 10.885s before a 0.111s repeat; warm native timings are not public-load certification. Faster refresh, richer adjacency/history, incident/performance integration and the broader global NOC charter remain open. New feeds, backup work and retention expansion remain held.
