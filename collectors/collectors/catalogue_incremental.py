@@ -240,7 +240,7 @@ ALTER TABLE inet_incremental.publications ADD COLUMN IF NOT EXISTS ready boolean
 CREATE INDEX IF NOT EXISTS incremental_ready_publication ON inet_incremental.publications(id DESC) WHERE ready;
 '''
 
-async def bootstrap(conn,after_routes=None,check_budget=None):
+async def bootstrap(conn,after_routes=None,check_budget=None,bulk=True):
     """Initialize an empty shadow from one MVCC snapshot, without source locks.
 
     Source triggers must already be installed. Preserve every dirty key and reset
@@ -252,13 +252,32 @@ async def bootstrap(conn,after_routes=None,check_budget=None):
             raise RuntimeError('Another catalogue writer is active')
         if await conn.fetchval('SELECT EXISTS(SELECT 1 FROM inet_incremental.current_routes)'):
             raise RuntimeError('Bootstrap requires an empty shadow; preserve existing versions')
+        if await conn.fetchval('SELECT initialized FROM inet_incremental.runtime WHERE singleton') or await conn.fetchval('SELECT EXISTS(SELECT 1 FROM inet_incremental.publications WHERE ready)'):
+            raise RuntimeError('Bootstrap refuses an initialized or previously published shadow')
+        if bulk:
+            # Aborted INSERTs can leave allocated pages despite having no visible
+            # rows. Reclaim only verified-empty, never-published derived objects.
+            empty_tables=['current_routes','current_memberships','prefix_refs','observer_refs','asns','origin_refs','facets','current_routes_history','current_memberships_history','asns_history','facets_history']
+            for table in empty_tables:
+                if await conn.fetchval(f'SELECT EXISTS(SELECT 1 FROM inet_incremental.{table})'):
+                    raise RuntimeError('Bootstrap requires all derived state empty: '+table)
+            await conn.execute('TRUNCATE '+','.join('inet_incremental.'+table for table in empty_tables))
         version=await begin_version(conn)
-        await conn.execute('INSERT INTO inet_incremental.current_routes ('+FIELDS+') '+CURRENT)
+        if bulk:
+            # Only never-published, empty derived tables are locked. Source writers
+            # and their dirty capture remain independent throughout this copy.
+            for table in ['current_routes','current_memberships','prefix_refs','observer_refs']:
+                await conn.execute(f'ALTER TABLE inet_incremental.{table} DROP CONSTRAINT {table}_pkey')
+            for table in ['current_routes','current_memberships']:
+                await conn.execute(f'ALTER TABLE inet_incremental.{table} DISABLE TRIGGER incremental_version')
+            for index in ['incremental_route_origin','incremental_route_peer','incremental_route_prefix','incremental_membership_resource']:
+                await conn.execute('DROP INDEX inet_incremental.'+index)
+        await conn.execute('INSERT INTO inet_incremental.current_routes ('+FIELDS+',_from) SELECT s.*,$1 FROM ('+CURRENT+') s',version)
         if check_budget:await check_budget(conn)
         if after_routes:await after_routes()
-        await conn.execute('''INSERT INTO inet_incremental.current_memberships(asn,observer,prefix,roles)
+        await conn.execute('''INSERT INTO inet_incremental.current_memberships(asn,observer,prefix,roles,_from)
         SELECT a,observer,prefix,((CASE WHEN origin_asn=a THEN 1 ELSE 0 END)+(CASE WHEN transit @> ARRAY[a] THEN 2 ELSE 0 END)+(CASE WHEN peer_asn=a THEN 4 ELSE 0 END))::smallint
-        FROM inet_incremental.current_routes CROSS JOIN LATERAL unnest(members) a;''')
+        ,$1 FROM inet_incremental.current_routes CROSS JOIN LATERAL unnest(members) a;''',version)
         if check_budget:await check_budget(conn)
         await conn.execute('''INSERT INTO inet_incremental.prefix_refs SELECT asn,prefix,count(*) FROM inet_incremental.current_memberships GROUP BY asn,prefix;
         INSERT INTO inet_incremental.observer_refs SELECT asn,observer,count(*) FROM inet_incremental.current_memberships GROUP BY asn,observer;
@@ -268,6 +287,13 @@ async def bootstrap(conn,after_routes=None,check_budget=None):
         UPDATE inet_incremental.runtime SET initialized=true,reset_barrier=true WHERE singleton;''')
         await seed_globals(conn)
         if check_budget:await check_budget(conn)
+        if bulk:
+            for table,columns in [('current_routes','observer,prefix'),('current_memberships','asn,observer,prefix'),('prefix_refs','asn,prefix'),('observer_refs','asn,observer')]:
+                await conn.execute(f'ALTER TABLE inet_incremental.{table} ADD PRIMARY KEY({columns})')
+            await conn.execute(DDL)
+            for table in ['current_routes','current_memberships']:
+                await conn.execute(f'ALTER TABLE inet_incremental.{table} ENABLE TRIGGER incremental_version')
+            if check_budget:await check_budget(conn)
         return {'version':version,'publication_enabled':False,'catchup_required':True}
 
 async def reconcile_reset(conn,limit=256):
