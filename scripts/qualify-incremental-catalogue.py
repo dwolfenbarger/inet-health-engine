@@ -30,8 +30,14 @@ async def main():
    am=await c.fetch('SELECT asn,observer,prefix::text,roles FROM inet_incremental.current_memberships')
    assert sorted(em)==sorted(tuple(r) for r in am),'ASN membership/role mismatch'
    counts=await c.fetch('''SELECT asn,count(*) routes,count(DISTINCT prefix) prefixes,count(*) FILTER(WHERE (roles&1)<>0) origins,count(*) FILTER(WHERE (roles&2)<>0) transits,count(*) FILTER(WHERE (roles&4)<>0) peers,count(*) FILTER(WHERE family(prefix)=4) ipv4,count(*) FILTER(WHERE family(prefix)=6) ipv6,count(DISTINCT observer) observers FROM inet_incremental.current_memberships GROUP BY asn ORDER BY asn''')
-   stored=await c.fetch('SELECT asn,routes,prefixes,origins,transits,peers,ipv4,ipv6,observers FROM inet_incremental.asns ORDER BY asn')
+   stored=await c.fetch('SELECT asn,routes,prefixes,origins,transits,peers,ipv4,ipv6,observers FROM inet_incremental.asns WHERE asn>0 ORDER BY asn')
    assert [dict(r) for r in counts]==[dict(r) for r in stored],'Aggregate or distinct counts differ'
+   expected_global=await c.fetchrow('SELECT count(*) routes,count(DISTINCT prefix) prefixes,count(DISTINCT origin_asn) origins,count(DISTINCT observer) observers,count(*) FILTER(WHERE family=4) ipv4,count(*) FILTER(WHERE family=6) ipv6 FROM inet_incremental.current_routes')
+   actual_global=await c.fetchrow('SELECT routes,prefixes,origins,observers,ipv4,ipv6 FROM inet_incremental.asns WHERE asn=0')
+   assert dict(expected_global)==(dict(actual_global) if actual_global else dict.fromkeys(expected_global.keys(),0)),'Global summary differs'
+   expected_facets=await c.fetch('SELECT observer,collector,family,count(*) routes FROM inet_incremental.current_routes GROUP BY observer,collector,family ORDER BY observer,family')
+   actual_facets=await c.fetch('SELECT observer,collector,family,routes FROM inet_incremental.facets ORDER BY observer,family')
+   assert [dict(r) for r in expected_facets]==[dict(r) for r in actual_facets],'Facet summary differs'
   for i in range(256):await put('qa-a',f'198.18.{i}.0/24',64502,[64500,64503,64502])
   await put('qa-b','198.18.0.0/24',64502,[64501,64502]);await put('qa-a','2001:db8::/32',4200000001,[64500,{'set':[64504,64505]},4200000001])
   await seed(c);await exact()

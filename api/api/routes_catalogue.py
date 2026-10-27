@@ -8,11 +8,14 @@ from fastapi import APIRouter,HTTPException,Query
 from api.deps import get_pg_pool,get_redis
 from api.routes_routing import read_observers
 from api.local_validation import validate
+from api.catalogue_backend import selected_generation,retained,for_generation
 router=APIRouter(prefix='/catalogue',tags=['observed-asn-inventory'])
 Role=Literal['any','origin','transit','peer']
 _metadata_slots=asyncio.Semaphore(3)
 def decoded(value):return json.loads(value) if isinstance(value,str) else value
 async def generation(pool,requested=None):
+ incremental=await selected_generation(pool,requested)
+ if incremental is not None:return incremental
  row=await pool.fetchrow('SELECT * FROM inet_catalog.generations WHERE published_at IS NOT NULL AND ($1::bigint IS NULL OR id=$1) ORDER BY id DESC LIMIT 1',requested)
  if not row:raise HTTPException(409 if requested else 503,'Browsing snapshot expired; refresh to continue.' if requested else 'ASN inventory is building; live route evidence remains available.')
  result=dict(row)
@@ -22,6 +25,10 @@ async def generation(pool,requested=None):
  return result
 
 async def ensure_retained(pool,gen):
+ incremental=await retained(pool.pool if hasattr(pool,'pool') else pool,gen)
+ if incremental is not None:
+  if not incremental:raise HTTPException(409,'Browsing snapshot expired; refresh to continue.')
+  return
  if not await pool.fetchval('SELECT EXISTS(SELECT 1 FROM inet_catalog.generations WHERE id=$1 AND published_at IS NOT NULL)',gen):
   raise HTTPException(409,'Browsing snapshot expired; refresh to continue.')
 
@@ -80,7 +87,7 @@ def decode_cursor(token,scope):
 @router.get('/asns')
 async def asns(q:str=Query('',max_length=32),role:Role='any',after:int=Query(0,ge=0,le=4294967295),
                generation_id:int|None=Query(None,ge=1),limit:int=Query(50,ge=1,le=100)):
- pool=await get_pg_pool();g=await generation(pool,generation_id)
+ pool=await get_pg_pool();g=await generation(pool,generation_id);pool=for_generation(pool,g)
  q=q.strip().upper().removeprefix('AS');number=None
  if q:
   if not re.fullmatch('[0-9]{1,10}',q) or not 1<=int(q)<=4294967295:raise HTTPException(422,'Search by ASN number, for example AS13335.')
@@ -101,7 +108,7 @@ async def routes(asn:int|None=Query(None,ge=1,le=4294967295),role:Role='any',fam
  if ip and prefix:raise HTTPException(422,'Choose a prefix or an IP address.')
  scope=fingerprint([asn,role,family,collector,prefix,ip]);page=decode_cursor(cursor,scope) if cursor else None
  if page and generation_id and generation_id!=page[0]:raise HTTPException(422,'Page generation differs.')
- pool=await get_pg_pool();g=await generation(pool,page[0] if page else generation_id)
+ pool=await get_pg_pool();g=await generation(pool,page[0] if page else generation_id);pool=for_generation(pool,g)
  try:clauses,args=query_plan(g['id'],asn,role,family,collector,prefix,ip)
  except ValueError:raise HTTPException(422,'Enter a valid CIDR prefix or IP address.') from None
  if 'facets' in g['summary'] and (family!='all' or collector!='all'):
@@ -161,7 +168,7 @@ async def routes(asn:int|None=Query(None,ge=1,le=4294967295),role:Role='any',fam
 @router.get('/asns/{asn}')
 async def detail(asn:int,generation_id:int|None=Query(None,ge=1)):
  if not 1<=asn<=4294967295:raise HTTPException(422,'Invalid ASN')
- pool=await get_pg_pool();g=await generation(pool,generation_id)
+ pool=await get_pg_pool();g=await generation(pool,generation_id);pool=for_generation(pool,g)
  row=await pool.fetchrow('SELECT * FROM inet_catalog.asns WHERE generation=$1 AND asn=$2',g['id'],asn)
  metadata={'state':'unavailable','holder':None,'source':'RIPEstat AS Overview'}
  try:
