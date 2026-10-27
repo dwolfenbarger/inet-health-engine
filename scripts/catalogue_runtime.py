@@ -42,7 +42,9 @@ async def run(c,*,seconds=60,batch=64,max_bytes=24*1024**3,reserve_bytes=35*1024
    else:
     result=await maintain(c,batch);processed+=result.get('processed',0);changed+=result.get('changed',0)
     # Ready metadata is published only after catching up atomically with intake.
-    if not result.get('processed') and now-published>=5:
+    if now-published>=5 and not await c.fetchval('SELECT EXISTS(SELECT 1 FROM inet_incremental.dirty)'):
+     # Publish at the just-drained batch boundary. Waiting for an additional
+     # empty maintenance cycle can starve publication on a continuous feed.
      version=await finish_catchup(c)
      if version:published=now
    max_batch=max(max_batch,time.monotonic()-at)

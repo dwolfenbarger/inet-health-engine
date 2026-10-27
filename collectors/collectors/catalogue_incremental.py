@@ -98,7 +98,7 @@ async def maintain(conn,limit=256):
         CREATE TEMP TABLE IF NOT EXISTS inc_globaldiff(observer text,prefix cidr,origin_asn bigint,family smallint,collector text,delta integer);
         CREATE TEMP TABLE IF NOT EXISTS inc_origindelta(origin_asn bigint,delta bigint);
         TRUNCATE inc_keys,inc_new,inc_diff,inc_refdelta,inc_distinct,inc_globaldiff,inc_origindelta;''')
-        keys=await conn.fetch('SELECT observer,prefix::text prefix FROM inet_incremental.dirty WHERE observer=$1 ORDER BY prefix LIMIT $2 FOR UPDATE',observer,limit)
+        keys=await conn.fetch('SELECT observer,prefix::text prefix FROM inet_incremental.dirty WHERE observer=$1 ORDER BY queued_at,prefix LIMIT $2 FOR UPDATE',observer,limit)
         if not keys:return {'processed':0,'changed':0,'publication_enabled':False}
         await conn.executemany('INSERT INTO inc_keys VALUES($1,$2::text::cidr)',[(k['observer'],k['prefix']) for k in keys])
         await conn.execute('ANALYZE inc_keys')
