@@ -37,12 +37,18 @@ CURRENT='''SELECT r.observer,r.prefix,r.origin_asn,o.peer_asn,o.collector,
  WHERE r.present AND r.epoch=o.epoch AND r.generation=o.generation'''
 FIELDS='observer,prefix,origin_asn,peer_asn,collector,transit,members,family,event_at,path,attrs,evidence_id,rank'
 
-async def install(conn):
-    assert await conn.fetchval('SELECT current_database()') in {'inet_catalogue_qa','inet_catalogue_lifecycle_qa'},'Shadow qualification database only'
+async def install(conn,*,production_shadow=False):
+    database=await conn.fetchval('SELECT current_database()')
+    if database not in {'inet_catalogue_qa','inet_catalogue_lifecycle_qa'} and not (production_shadow and database=='inethealth'):
+        raise RuntimeError('Explicit production shadow installation required')
     await conn.execute(DDL)
     await install_versions(conn)
     await conn.execute(RUNTIME_DDL)
     await conn.execute(GLOBAL_DDL)
+    await conn.execute('''CREATE INDEX IF NOT EXISTS incremental_history_origin ON inet_incremental.current_routes_history(origin_asn,observer,prefix,_from);
+    CREATE INDEX IF NOT EXISTS incremental_history_peer ON inet_incremental.current_routes_history(peer_asn,observer,prefix,_from);
+    CREATE INDEX IF NOT EXISTS incremental_history_prefix ON inet_incremental.current_routes_history USING gist(prefix inet_ops);
+    CREATE INDEX IF NOT EXISTS facets_expiry ON inet_incremental.facets_history(_until)''')
     await conn.execute('CREATE INDEX IF NOT EXISTS incremental_dirty_age ON inet_incremental.dirty(queued_at)')
     await conn.execute('GRANT SELECT ON ALL TABLES IN SCHEMA inet_incremental TO inetuser')
     await conn.execute('DROP TRIGGER IF EXISTS incremental_version ON inet_incremental.facets; CREATE TRIGGER incremental_version BEFORE INSERT OR UPDATE OR DELETE ON inet_incremental.facets FOR EACH ROW EXECUTE FUNCTION inet_incremental.version_change()')
@@ -80,7 +86,7 @@ async def maintain(conn,limit=256):
     async with conn.transaction():
         if not await conn.fetchval("SELECT pg_try_advisory_xact_lock(hashtext('inet-incremental-shadow'))"):
             return {'processed':0,'changed':0,'publication_enabled':False,'busy':True}
-        observer=await conn.fetchval('SELECT observer FROM inet_incremental.dirty ORDER BY observer,prefix LIMIT 1')
+        observer=await conn.fetchval('SELECT observer FROM inet_incremental.dirty ORDER BY queued_at,observer,prefix LIMIT 1')
         if observer:await conn.fetchrow('SELECT id FROM routing_observers WHERE id=$1 FOR UPDATE',observer)
         if await conn.fetchval('SELECT EXISTS(SELECT 1 FROM inet_incremental.resets)'):
             raise RuntimeError('Observer reset requires controlled reseed; publication blocked')
@@ -122,6 +128,7 @@ async def maintain(conn,limit=256):
             await conn.execute(f'''UPDATE inet_incremental.{table} r SET refs=r.refs+d.delta FROM (SELECT asn,{column},sum(delta) delta FROM inc_refdelta GROUP BY asn,{column}) d WHERE r.asn=d.asn AND r.{column}=d.{column};
             INSERT INTO inet_incremental.{table}(asn,{column},refs) SELECT d.asn,d.{column},d.delta FROM (SELECT asn,{column},sum(delta) delta FROM inc_refdelta GROUP BY asn,{column}) d WHERE d.delta>0 AND NOT EXISTS(SELECT 1 FROM inet_incremental.{table} r WHERE r.asn=d.asn AND r.{column}=d.{column});
             DELETE FROM inet_incremental.{table} r USING (SELECT DISTINCT asn,{column} FROM inc_refdelta) d WHERE r.asn=d.asn AND r.{column}=d.{column} AND r.refs=0;''')
+        withdrawn=await conn.fetchval('SELECT count(*) FROM inet_incremental.current_routes r JOIN inc_keys k USING(observer,prefix) WHERE NOT EXISTS(SELECT 1 FROM inc_new n WHERE n.observer=r.observer AND n.prefix=r.prefix)')
         await conn.execute('''INSERT INTO inet_incremental.asns(asn,routes,prefixes,origins,transits,peers,ipv4,ipv6,observers)
         WITH d AS (SELECT asn,sum((newroles IS NOT NULL)::int-(oldroles IS NOT NULL)::int) routes,
         sum((coalesce(newroles,0)&1)-(coalesce(oldroles,0)&1)) origins,
@@ -138,7 +145,8 @@ async def maintain(conn,limit=256):
         DELETE FROM inet_incremental.current_memberships m USING inc_diff d WHERE d.asn>0 AND m.asn=d.asn AND m.observer=d.observer AND m.prefix=d.prefix;
         INSERT INTO inet_incremental.current_memberships(asn,observer,prefix,roles) SELECT asn,observer,prefix,newroles FROM inc_diff WHERE asn>0 AND newroles IS NOT NULL;
         DELETE FROM inet_incremental.current_routes r USING inc_keys k WHERE r.observer=k.observer AND r.prefix=k.prefix AND NOT EXISTS(SELECT 1 FROM inc_new n WHERE n.observer=r.observer AND n.prefix=r.prefix);''')
-        await conn.execute('UPDATE inet_incremental.asns SET origins=origins+$1 WHERE asn=0',origin_change)
+        if origin_change:
+            await conn.execute('UPDATE inet_incremental.asns SET origins=origins+$1 WHERE asn=0',origin_change)
         await conn.execute('''INSERT INTO inet_incremental.facets(observer,collector,family,routes)
           SELECT observer,collector,family,sum(delta) FROM inc_globaldiff GROUP BY observer,collector,family HAVING sum(delta)<>0
           ON CONFLICT(observer,family) DO UPDATE SET collector=excluded.collector,routes=inet_incremental.facets.routes+excluded.routes;
@@ -147,7 +155,7 @@ async def maintain(conn,limit=256):
         old_values=','.join('inet_incremental.current_routes.'+f for f in fields[2:]);new_values=','.join('excluded.'+f for f in fields[2:])
         result=await conn.execute('INSERT INTO inet_incremental.current_routes ('+FIELDS+') SELECT '+FIELDS+' FROM inc_new ON CONFLICT(observer,prefix) DO UPDATE SET '+sets+' WHERE ('+old_values+') IS DISTINCT FROM ('+new_values+')')
         await conn.execute('DELETE FROM inet_incremental.dirty d USING inc_keys k WHERE d.observer=k.observer AND d.prefix=k.prefix')
-        return {'processed':len(keys),'changed':int(result.split()[-1]),'publication_enabled':False,'version':version}
+        return {'processed':len(keys),'changed':int(result.split()[-1])+withdrawn,'withdrawn':withdrawn,'publication_enabled':False,'version':version}
 
 VERSION_DDL='''
 CREATE TABLE IF NOT EXISTS inet_incremental.publications(id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,captured_at timestamptz NOT NULL DEFAULT clock_timestamp());
@@ -188,6 +196,7 @@ async def install_versions(conn):
     for table in ['current_routes','current_memberships','asns']:
         await conn.execute(f'DROP TRIGGER IF EXISTS incremental_version ON inet_incremental.{table}')
         await conn.execute(f'CREATE TRIGGER incremental_version BEFORE INSERT OR UPDATE OR DELETE ON inet_incremental.{table} FOR EACH ROW EXECUTE FUNCTION inet_incremental.version_change()')
+        await conn.execute(f'CREATE INDEX IF NOT EXISTS {table}_expiry ON inet_incremental.{table}_history(_until)')
 
 async def begin_version(conn):
     version=await conn.fetchval('INSERT INTO inet_incremental.publications DEFAULT VALUES RETURNING id')
@@ -208,10 +217,13 @@ async def prune_versions(conn,retain_seconds=3600,limit=1024):
     if not 60<=retain_seconds<=86400 or not 1<=limit<=4096:raise ValueError('Retention budget')
     async with conn.transaction():
         if not await conn.fetchval("SELECT pg_try_advisory_xact_lock(hashtext('inet-incremental-shadow'))"):return {'busy':True}
-        floor=await conn.fetchval("SELECT least(coalesce(min(id) FILTER(WHERE captured_at>=clock_timestamp()-$1::int*interval '1 second'),max(id)),max(id)) FROM inet_incremental.publications",retain_seconds)
+        floor=await conn.fetchval("SELECT least(coalesce(min(id) FILTER(WHERE captured_at>=clock_timestamp()-$1::int*interval '1 second'),max(id)),coalesce(max(id) FILTER(WHERE ready),max(id))) FROM inet_incremental.publications",retain_seconds)
         if floor is None:return {'deleted':0}
         await conn.execute('''WITH old AS (SELECT id FROM inet_incremental.publications WHERE id<$1 ORDER BY id LIMIT $2)
           DELETE FROM inet_incremental.publications p USING old WHERE p.id=old.id''',floor,limit)
+        # Bounded metadata deletion may leave older tokens. They still own their
+        # history until a later cycle expires them, even if outside the time goal.
+        floor=await conn.fetchval('SELECT min(id) FROM inet_incremental.publications')
         removed=0
         for table in ['current_routes_history','current_memberships_history','asns_history','facets_history']:
             result=await conn.execute(f'''WITH old AS (SELECT ctid FROM inet_incremental.{table} WHERE _until<=$1 LIMIT $2 FOR UPDATE SKIP LOCKED)
@@ -228,7 +240,7 @@ ALTER TABLE inet_incremental.publications ADD COLUMN IF NOT EXISTS ready boolean
 CREATE INDEX IF NOT EXISTS incremental_ready_publication ON inet_incremental.publications(id DESC) WHERE ready;
 '''
 
-async def bootstrap(conn,after_routes=None):
+async def bootstrap(conn,after_routes=None,check_budget=None):
     """Initialize an empty shadow from one MVCC snapshot, without source locks.
 
     Source triggers must already be installed. Preserve every dirty key and reset
@@ -242,17 +254,20 @@ async def bootstrap(conn,after_routes=None):
             raise RuntimeError('Bootstrap requires an empty shadow; preserve existing versions')
         version=await begin_version(conn)
         await conn.execute('INSERT INTO inet_incremental.current_routes ('+FIELDS+') '+CURRENT)
+        if check_budget:await check_budget(conn)
         if after_routes:await after_routes()
         await conn.execute('''INSERT INTO inet_incremental.current_memberships(asn,observer,prefix,roles)
         SELECT a,observer,prefix,((CASE WHEN origin_asn=a THEN 1 ELSE 0 END)+(CASE WHEN transit @> ARRAY[a] THEN 2 ELSE 0 END)+(CASE WHEN peer_asn=a THEN 4 ELSE 0 END))::smallint
-        FROM inet_incremental.current_routes CROSS JOIN LATERAL unnest(members) a;
-        INSERT INTO inet_incremental.prefix_refs SELECT asn,prefix,count(*) FROM inet_incremental.current_memberships GROUP BY asn,prefix;
+        FROM inet_incremental.current_routes CROSS JOIN LATERAL unnest(members) a;''')
+        if check_budget:await check_budget(conn)
+        await conn.execute('''INSERT INTO inet_incremental.prefix_refs SELECT asn,prefix,count(*) FROM inet_incremental.current_memberships GROUP BY asn,prefix;
         INSERT INTO inet_incremental.observer_refs SELECT asn,observer,count(*) FROM inet_incremental.current_memberships GROUP BY asn,observer;
         INSERT INTO inet_incremental.asns(asn,routes,prefixes,origins,transits,peers,ipv4,ipv6,observers)
         SELECT asn,count(*),count(DISTINCT prefix),count(*) FILTER(WHERE (roles&1)<>0),count(*) FILTER(WHERE (roles&2)<>0),count(*) FILTER(WHERE (roles&4)<>0),count(*) FILTER(WHERE family(prefix)=4),count(*) FILTER(WHERE family(prefix)=6),count(DISTINCT observer)
         FROM inet_incremental.current_memberships GROUP BY asn;
         UPDATE inet_incremental.runtime SET initialized=true,reset_barrier=true WHERE singleton;''')
         await seed_globals(conn)
+        if check_budget:await check_budget(conn)
         return {'version':version,'publication_enabled':False,'catchup_required':True}
 
 async def reconcile_reset(conn,limit=256):

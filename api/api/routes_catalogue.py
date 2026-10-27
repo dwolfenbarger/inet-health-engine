@@ -8,7 +8,7 @@ from fastapi import APIRouter,HTTPException,Query
 from api.deps import get_pg_pool,get_redis
 from api.routes_routing import read_observers
 from api.local_validation import validate
-from api.catalogue_backend import selected_generation,retained,for_generation
+from api.catalogue_backend import selected_generation,retained,for_generation,ScopedPool
 router=APIRouter(prefix='/catalogue',tags=['observed-asn-inventory'])
 Role=Literal['any','origin','transit','peer']
 _metadata_slots=asyncio.Semaphore(3)
@@ -95,7 +95,8 @@ async def asns(q:str=Query('',max_length=32),role:Role='any',after:int=Query(0,g
  role_column={'any':'routes','origin':'origins','transit':'transits','peer':'peers'}[role]
  where=f'generation=$1 AND {role_column}>0 AND ($2::bigint IS NULL OR asn=$2)'
  total=await pool.fetchval('SELECT count(*) FROM inet_catalog.asns WHERE '+where,g['id'],number)
- rows=await pool.fetch('SELECT * FROM inet_catalog.asns WHERE '+where+' AND asn>$3 ORDER BY asn LIMIT $4',g['id'],number,after,limit+1)
+ if isinstance(pool,ScopedPool):rows=await pool.page_fetch('asns',[where,'asn>$3'],[g['id'],number,after],limit+1)
+ else:rows=await pool.fetch('SELECT * FROM inet_catalog.asns WHERE '+where+' AND asn>$3 ORDER BY asn LIMIT $4',g['id'],number,after,limit+1)
  more=len(rows)>limit;rows=rows[:limit]
  await ensure_retained(pool,g['id'])
  return {'generation':g,'total':total,'asns':[dict(r) for r in rows],'next_after':rows[-1]['asn'] if more else None,
@@ -138,7 +139,13 @@ async def routes(asn:int|None=Query(None,ge=1,le=4294967295),role:Role='any',fam
   args=member_args
  else:
   query='SELECT matched.*,prefix::text prefix_text FROM ('+base+') matched'+page_where+f' ORDER BY observer,prefix LIMIT ${len(args)}'
- rows=await pool.fetch(query,*args);more=len(rows)>limit;rows=rows[:limit]
+ if isinstance(pool,ScopedPool) and asn and role in ('any','transit') and not ip:
+  rows=await pool.member_routes(member_where,member_args[:-1],limit+1)
+ elif isinstance(pool,ScopedPool) and not ip:
+  bounded_clauses=clauses+([page_where.removeprefix(' WHERE ')] if page else [])
+  rows=await pool.page_fetch('routes',bounded_clauses,args[:-1],limit+1)
+ else:rows=await pool.fetch(query,*args)
+ more=len(rows)>limit;rows=rows[:limit]
  pairs=list(dict.fromkeys((r['prefix_text'],r['origin_asn']) for r in rows if r['origin_asn']))
  proof_rows=await pool.fetch("SELECT evidence_id,payload FROM source_evidence WHERE source='rpki-local' AND evidence_id=ANY($1::text[]) AND observed_at>now()-interval '60 minutes'",[f'{p}|{a}' for p,a in pairs])
  proofs={r['evidence_id']:decoded(r['payload']) for r in proof_rows}

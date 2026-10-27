@@ -42,14 +42,66 @@ class ScopedPool:
         self.pool=pool;self.generation=int(generation);self.version=self.generation-OFFSET
         if self.version<1:raise ValueError('Invalid incremental generation')
     def query(self,sql):
-        source={
-          'routes':f'(SELECT {self.generation}::bigint generation,{FIELDS} FROM inet_incremental.routes_at({self.version}))',
-          'memberships':f'(SELECT {self.generation}::bigint generation,asn,observer,prefix,roles FROM inet_incremental.memberships_at({self.version}))',
-          'asns':f'(SELECT {self.generation}::bigint generation,{COUNTS} FROM inet_incremental.asns_at({self.version}) WHERE asn>0)'}
+        # General snapshot relations support aggregates and selective lookups.
+        # Ordered pages use the explicitly bounded methods below instead.
+        source={}
+        for name,table,columns,extra in [
+          ('routes','current_routes',FIELDS,''),
+          ('memberships','current_memberships','asn,observer,prefix,roles',''),
+          ('asns','asns',COUNTS,' AND asn>0')]:
+            select=f'SELECT {self.generation}::bigint generation,{columns} FROM inet_incremental.'
+            source[name]=f'({select}{table} WHERE _from<={self.version}{extra} UNION ALL {select}{table}_history WHERE _from<={self.version} AND _until>{self.version}{extra})'
         return re.sub(r'\binet_catalog\.(routes|memberships|asns)\b',lambda m:source[m[1]],sql)
     async def fetch(self,sql,*args,**kwargs):return await self.pool.fetch(self.query(sql),*args,**kwargs)
     async def fetchrow(self,sql,*args,**kwargs):return await self.pool.fetchrow(self.query(sql),*args,**kwargs)
     async def fetchval(self,sql,*args,**kwargs):return await self.pool.fetchval(self.query(sql),*args,**kwargs)
+
+    def relation(self,table,history=False,alias='r'):
+        name={'routes':'current_routes','memberships':'current_memberships','asns':'asns'}[table]
+        fields={'routes':FIELDS,'memberships':'asn,observer,prefix,roles','asns':COUNTS}[table]
+        columns=','.join(f'{alias}.{x}' for x in fields.split(','))
+        if table=='routes':columns+=f',{alias}.prefix::text prefix_text'
+        projection=f'{self.generation}::bigint generation,{columns}'
+        condition=f'{alias}._from<={self.version}'
+        if history:condition+=f' AND {alias}._until>{self.version}';name+='_history'
+        if table=='asns':condition+=f' AND {alias}.asn>0'
+        return projection,f'inet_incremental.{name} {alias}',condition
+
+    def page_query(self,table,clauses,args,limit):
+        if not 1<=limit<=201:raise ValueError('Page budget')
+        where=' AND '.join(clauses) or 'true'
+        where=re.sub(r'\b(?:r\.)?generation\s*=\s*\$1',f'{self.generation}::bigint=$1',where)
+        order='asn' if table=='asns' else 'observer,prefix'
+        branches=[]
+        for history in [False,True]:
+            projection,source,version=self.relation(table,history)
+            branches.append(f'(SELECT {projection} FROM {source} WHERE {version} AND ({where}) ORDER BY '+','.join('r.'+x for x in order.split(','))+f' LIMIT ${len(args)+1})')
+        # Bound each indexed branch before merging. PostgreSQL can otherwise
+        # sort every current/history row for a high-cardinality ASN or global page.
+        return 'SELECT * FROM ('+' UNION ALL '.join(branches)+f') bounded ORDER BY {order} LIMIT ${len(args)+1}',[*args,limit]
+
+    async def page_fetch(self,table,clauses,args,limit):
+        sql,values=self.page_query(table,clauses,args,limit)
+        return await self.pool.fetch(sql,*values)
+
+    def member_route_query(self,clauses,args,limit):
+        page,values=self.page_query('memberships',clauses,args,limit)
+        branches=[]
+        for history in [False,True]:
+            projection,source,version=self.relation('routes',history)
+            # Equal scalar bounds select the (observer,prefix) btree. A plain
+            # prefix equality can choose the much costlier network GiST for each
+            # member even when the complete primary key is available.
+            key='r.observer=p.observer AND r.prefix>=p.prefix AND r.prefix<=p.prefix'
+            branches.append(f'SELECT {projection} FROM {source} WHERE {version} AND {key}')
+        # OFFSET 0 retains a bounded parameterized key lookup per page member,
+        # rather than letting a hash join scan the entire routing inventory.
+        sql='WITH page AS MATERIALIZED ('+page+') SELECT found.* FROM page p CROSS JOIN LATERAL ('+' UNION ALL '.join(branches)+' OFFSET 0) found ORDER BY found.observer,found.prefix'
+        return sql,values
+
+    async def member_routes(self,clauses,args,limit):
+        sql,values=self.member_route_query(clauses,args,limit)
+        return await self.pool.fetch(sql,*values)
 
 def for_generation(pool,generation):
     return ScopedPool(pool,generation['id']) if generation.get('backend')=='incremental' else pool
