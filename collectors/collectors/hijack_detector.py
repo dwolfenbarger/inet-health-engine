@@ -45,7 +45,7 @@ async def detect_origin_changes(pool, window_minutes: int = 30):
                   (time, event_type, affected_prefix, origin_asn, expected_asn,
                    severity, confidence, source, raw_data)
                 VALUES ($1, 'hijack_origin_change', $2, $3, $4, 4, 0.8, 'detector',
-                        jsonb_build_object('baseline_count', $5))
+                        jsonb_build_object('baseline_count', $5::bigint))
                 """,
                 row["time"],
                 row["prefix"],
@@ -66,3 +66,4 @@ async def run_once():
 
 if __name__ == "__main__":
     asyncio.run(run_once())
+
