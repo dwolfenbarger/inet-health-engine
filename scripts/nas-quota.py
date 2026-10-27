@@ -6,7 +6,7 @@ ROOT=Path('/Volumes/NAS1/storage/ai/ihealth_storage');GIB=1024**3
 CAP=350*GIB;ADMIT=260*GIB;DETAIL=120*GIB
 STORAGE_ID='e6a0939db1dd4a12a5dbec00ccf45296'
 def mount_check():
-    if socket.gethostname() not in {'proxmox1','pve2'}:raise RuntimeError('Archive host only')
+    if socket.gethostname() not in {'proxmox1','pve2','pve-prod'}:raise RuntimeError('Archive host only')
     p=subprocess.run(['findmnt','-J','-T',str(ROOT),'-o','TARGET,SOURCE,FSTYPE'],check=True,capture_output=True,text=True,timeout=10)
     f=json.loads(p.stdout)['filesystems'][0]
     if (f['target'],f['source'],f['fstype'])!=('/Volumes/NAS1','//192.168.1.60/nas1','cifs'):raise RuntimeError('NAS identity absent; no local fallback')
