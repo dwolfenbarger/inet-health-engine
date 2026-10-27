@@ -37,12 +37,17 @@ class IssueContracts(unittest.TestCase):
    r=c.get('/issues');self.assertEqual(r.status_code,503);self.assertNotIn('private',r.text)
 
 class EvidenceContracts(unittest.IsolatedAsyncioTestCase):
+ async def asyncSetUp(self):
+  for name,result in [('candidate_groups',[]),('read_status',{'state':'disabled','observers':[]})]:
+   guard=patch('api.routes_diagnostics.'+name,AsyncMock(return_value=result));guard.start();self.addCleanup(guard.stop)
+
  async def test_victim_transit_and_peer_scope_and_report_count_are_preserved(self):
   now=datetime.now(timezone.utc);pool=AsyncMock();pool.fetchval.return_value=now
   pool.fetch.return_value=[{'event_type':'bgp_hijack','affected_prefix':'192.0.2.0/24','origin_asn':64501,'expected_asn':64502,'first_seen':now,'last_seen':now,'reports':28,'severity':4,'detector_confidence':.8,'viewpoints':1,'sources':['ris/rrc00'],'latest_id':str(uuid.uuid4())}]
   with patch('api.routes_issues.mesh_data',AsyncMock(return_value={'directions':[]})):
    r=await build_snapshot(pool,60,64502,None,'all','all')
-  sql,args=pool.fetch.call_args.args[0],pool.fetch.call_args.args[1:]
+  sampled_call=pool.fetch.call_args_list[0]
+  sql,args=sampled_call.args[0],sampled_call.args[1:]
   self.assertIn('expected_asn=$4',sql);self.assertIn("raw_data->'as_path'",sql);self.assertIn("raw_data->>'peer_asn'",sql);self.assertEqual(args[3],64502)
   self.assertEqual(r['items'][0]['reports'],28);self.assertNotIn('transitions',r['items'][0]);self.assertEqual(r['summary']['bgp_hijack'],1)
  async def test_measured_candidates_keep_stale_state_and_do_not_claim_prefix_scope(self):

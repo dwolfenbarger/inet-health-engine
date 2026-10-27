@@ -10,3 +10,5 @@
 .issue-evidence .table-scroll {max-height:480px;overflow:auto}.issue-evidence th {position:sticky;top:0;background:#192a38;z-index:1}#routing-evidence {scroll-margin-top:18px}
 
 .live-noc .issue-path .live-link {display:inline-block}.issue-path>span {white-space:nowrap}
+
+.diagnostic-coverage {margin:14px 0;padding:14px;border:1px solid #45685c;border-radius:8px;background:#142b2b;color:#c3d4dc}.diagnostic-coverage.attention {border-color:#9b7948;background:#2a2925}.diagnostic-coverage summary {cursor:pointer;font-weight:600}.diagnostic-coverage p,.routing-history>p {font-size:13px;line-height:1.6;color:#b6c7d0}.diagnostic-coverage ul {max-height:220px;overflow:auto}.diagnostic-coverage li {margin:8px 0}.diagnostic-coverage small,.routing-history small {display:block;line-height:1.6;color:#b6c7d0}.routing-history {margin-bottom:20px;padding:22px;scroll-margin-top:18px}.history-list {max-height:600px;overflow:auto}.history-list td {vertical-align:top}.history-list th {position:sticky;top:0;background:#192a38}.history-list pre {max-height:300px;max-width:400px;overflow:auto;white-space:pre-wrap}.routing-history .issue-path {min-width:200px}

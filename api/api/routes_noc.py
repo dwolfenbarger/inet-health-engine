@@ -264,3 +264,6 @@ router.include_router(catalogue_router)
 
 from api.routes_issues import router as issues_router
 router.include_router(issues_router)
+
+from api.routes_diagnostics import router as diagnostics_router
+router.include_router(diagnostics_router)

@@ -16,7 +16,7 @@ router = APIRouter(prefix='/issues', tags=['issues'])
 KINDS = {'bgp_flap': 'Route flapping', 'bgp_hijack': 'Suspected origin hijack',
          'withdrawal_surge': 'Withdrawal surge', 'performance': 'Measured path change'}
 LIMITATIONS = [
-    'Routing candidates come from the bounded sampled RIS detector, not the continuous maintained RIB.',
+    'Sampled and continuous selected-peer candidates are labeled separately. Their shared RIS lineage can overlap; counts are not independent confirmations.',
     'Repeated detector reports are grouped; report counts are not flap-transition counts or independent confirmations.',
     'Last observation is not proof that an issue remains active or has recovered.',
     'Origin changes can be legitimate. Detector confidence is not a verified probability of hijacking.',
@@ -38,6 +38,7 @@ def normalize_group(r):
     item['kind'] = item.pop('event_type')
     item['title'] = KINDS.get(item['kind'], item['kind'])
     item['evidence_type'] = 'routing'
+    item['detection_mode'] = 'sampled'
     item['state'] = 'candidate'
     item['confirmation'] = 'Unconfirmed; recovery not established'
     for k in ['first_seen', 'last_seen']:
@@ -87,11 +88,18 @@ async def build_snapshot(pool, minutes, asn, resource, family, collector):
                     'severity':None,'detector_confidence':None,'measurement':d})
     except Exception:
         performance_error='Measured-path evidence unavailable; routing results remain available.'
-    items=sorted(routing+performance,key=lambda x:(x['last_seen'],x['id']),reverse=True)
+    continuous=[];continuous_status=None;continuous_error=None
+    try:
+        from api.routes_diagnostics import candidate_groups,read_status
+        continuous=await candidate_groups(pool,minutes,asn,resource,family,collector,now)
+        continuous_status=await read_status(pool,collector)
+    except Exception:
+        continuous_error='Continuous routing analysis unavailable. Sampled and measurement evidence remain separate.'
+    items=sorted(routing+performance+continuous,key=lambda x:(x['last_seen'],x['id']),reverse=True)
     return {'as_of':now.isoformat(),'items':items,'summary':{k:sum(x['kind']==k for x in items) for k in KINDS},
         'routing_input':{'last_observation':latest.isoformat() if latest else None,
             'state':'unavailable' if input_age is None else 'fresh' if input_age<=240 else 'stale'},
-        'performance_error':performance_error,'performance_scope':'Prefix/IP and routing-collector filters exclude mesh candidates; endpoint mapping to those scopes is not established.',
+        'continuous_status':continuous_status,'continuous_error':continuous_error,'performance_error':performance_error,'performance_scope':'Prefix/IP and routing-collector filters exclude mesh candidates; endpoint mapping to those scopes is not established.',
         'limits':LIMITATIONS,'scope':{'minutes':minutes,'asn':asn,'resource':str(resource) if resource else None,'family':family,'collector':collector}}
 
 
