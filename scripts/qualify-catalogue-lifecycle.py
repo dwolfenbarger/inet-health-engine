@@ -59,6 +59,20 @@ async def main():
   assert await for_generation(c,role_metadata).fetchval('SELECT count(*) FROM inet_catalog.routes WHERE generation=$1',metadata['id'])==2
  assert await c.fetchval("SELECT origin_asn FROM inet_incremental.current_routes WHERE prefix='192.0.2.0/24'")==64504
  assert await c.fetchval("SELECT origin_asn FROM inet_incremental.routes_at($1) WHERE prefix='192.0.2.0/24'",result['version'])==64502
+ # Collector/peer metadata resets change projection without changing epoch.
+ # Opposing old/new collector deltas must not target one facet row twice or
+ # leave the old label behind when the route-count delta is zero.
+ await w.execute("UPDATE routing_observers SET collector='fixture-renamed',peer_asn=64510 WHERE id='lifecycle'")
+ assert not await finish_catchup(c)
+ while await c.fetchval('SELECT EXISTS(SELECT 1 FROM inet_incremental.resets)'):await reconcile_reset(c,1)
+ while await c.fetchval('SELECT EXISTS(SELECT 1 FROM inet_incremental.dirty)'):await maintain(c,1)
+ renamed=await finish_catchup(c);assert renamed
+ assert await c.fetchval("SELECT count(*) FROM inet_incremental.current_routes WHERE collector='fixture-renamed' AND peer_asn=64510")==2
+ assert await c.fetchval("SELECT count(*) FROM inet_incremental.facets WHERE collector='fixture-renamed' AND routes=2")==1
+ assert await c.fetchval('SELECT peers FROM inet_incremental.asns WHERE asn=64510')==2
+ assert await c.fetchval('SELECT peers FROM inet_incremental.asns WHERE asn=64500')==0
+ assert await c.fetchval("SELECT count(*) FROM inet_incremental.routes_at($1) WHERE collector='fixture' AND peer_asn=64500",ready)==2
+ assert await c.fetchval("SELECT count(*) FROM inet_incremental.facets_at($1) WHERE collector='fixture' AND routes=2",ready)==1
  # A session reset must also remove source keys physically deleted meanwhile.
  async with w.transaction():
   await w.fetchrow("SELECT id FROM routing_observers WHERE id='lifecycle' FOR UPDATE")
@@ -79,6 +93,6 @@ async def main():
  assert not await c.fetchval('SELECT EXISTS(SELECT 1 FROM inet_incremental.current_routes)')
  assert await c.fetchval('SELECT count(*) FROM inet_incremental.routes_at($1)',ready)==2
  assert not await c.fetchval('SELECT EXISTS(SELECT 1 FROM inet_incremental.asns WHERE asn>0)')
- print('PASS_BOOTSTRAP_RESET',json.dumps({'nonblocking_overlap':True,'injected_failure_preserves_queue':True,'snapshot_plus_catchup':True,'revision_restart_batches':batches,'old_pinned_routes_retained':True,'seconds':round(time.monotonic()-before,3)}))
+ print('PASS_BOOTSTRAP_RESET',json.dumps({'nonblocking_overlap':True,'injected_failure_preserves_queue':True,'snapshot_plus_catchup':True,'revision_restart_batches':batches,'old_pinned_routes_retained':True,'collector_peer_reset_zero_delta_and_history':True,'seconds':round(time.monotonic()-before,3)}))
  await w.close();await c.close()
 asyncio.run(main())

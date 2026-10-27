@@ -147,8 +147,11 @@ async def maintain(conn,limit=256):
         DELETE FROM inet_incremental.current_routes r USING inc_keys k WHERE r.observer=k.observer AND r.prefix=k.prefix AND NOT EXISTS(SELECT 1 FROM inc_new n WHERE n.observer=r.observer AND n.prefix=r.prefix);''')
         if origin_change:
             await conn.execute('UPDATE inet_incremental.asns SET origins=origins+$1 WHERE asn=0',origin_change)
-        await conn.execute('''INSERT INTO inet_incremental.facets(observer,collector,family,routes)
-          SELECT observer,collector,family,sum(delta) FROM inc_globaldiff GROUP BY observer,collector,family HAVING sum(delta)<>0
+        await conn.execute('''UPDATE inet_incremental.facets f SET collector=o.collector FROM routing_observers o
+          WHERE o.id=f.observer AND f.collector IS DISTINCT FROM o.collector AND EXISTS(SELECT 1 FROM inc_keys k WHERE k.observer=f.observer);
+          INSERT INTO inet_incremental.facets(observer,collector,family,routes)
+          SELECT d.observer,o.collector,d.family,sum(d.delta) FROM inc_globaldiff d JOIN routing_observers o ON o.id=d.observer
+          GROUP BY d.observer,o.collector,d.family HAVING sum(d.delta)<>0
           ON CONFLICT(observer,family) DO UPDATE SET collector=excluded.collector,routes=inet_incremental.facets.routes+excluded.routes;
           DELETE FROM inet_incremental.facets f USING (SELECT DISTINCT observer,family FROM inc_globaldiff) d WHERE f.observer=d.observer AND f.family=d.family AND f.routes=0;''')
         fields=FIELDS.split(',');sets=','.join(f'{f}=excluded.{f}' for f in fields[2:])
