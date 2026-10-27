@@ -33,6 +33,21 @@ def route_row(observer,row,change,rank,order):
     return (observer,row['prefix'],change['epoch'],change['generation'],row['event_at'],rank,order,
             row['present'],row['origin_asn'],json.dumps(row['path']),json.dumps(row['attrs']),row['evidence_id'])
 
+def consolidate_routes(rows):
+    """Keep the SQL winner per observer/prefix inside one atomic transaction.
+
+    Journal frames and detector inputs are unchanged. This is only a current-view
+    write reduction; equal ordering keys retain the first row, as UPSERT does.
+    """
+    winners = {}
+    for value in rows:
+        key = value[:2]
+        previous = winners.get(key)
+        order = (value[2], value[4], value[5], value[6])
+        if previous is None or order > (previous[2], previous[4], previous[5], previous[6]):
+            winners[key] = value
+    return list(winners.values())
+
 async def register(observer):
     pool=await get_pg_pool()
     async with pool.acquire() as conn:
@@ -59,6 +74,7 @@ async def commit_messages(observer,frames):
     pool=await get_pg_pool()
     async with pool.acquire() as conn,conn.transaction():
         row=dict(await conn.fetchrow('SELECT * FROM routing_observers WHERE id=$1 FOR UPDATE',observer['id']))
+        pending_routes=[]
         for raw,received in frames:
             at,ident,changes=ris_changes(raw,observer)
             seq=row['sequence']+1
@@ -82,10 +98,12 @@ async def commit_messages(observer,frames):
             if kind=='RIS_PEER_STATE':row['peer_state']=data.get('state','unknown')
             elif kind in ['KEEPALIVE','UPDATE'] and row['peer_state']!='down':row['peer_state']='observed'
             if row['reset_at'] is not None and at<row['reset_at']:changes=[]
-            await conn.executemany(UPSERT,[route_row(observer['id'],item,row,2,f'{seq:020d}:{i:06d}') for i,item in enumerate(changes)])
+            pending_routes.extend(route_row(observer['id'],item,row,2,f'{seq:020d}:{i:06d}') for i,item in enumerate(changes))
             await conn.execute('''UPDATE routing_gaps SET until_at=$2,state='waiting_archive'
                 WHERE observer=$1 AND until_at IS NULL AND (from_at IS NULL OR from_at<=$2)''',observer['id'],at)
             row['event_at']=max(row['event_at'] or at,at);row['received_at']=received
+        if pending_routes:
+            await conn.executemany(UPSERT,consolidate_routes(pending_routes))
         await conn.execute('''UPDATE routing_observers SET epoch=$2,generation=$3,sequence=$4,messages=$5,updates=$6,
             peer_state=$7,baseline_state=$8,reset_at=$9,event_at=$10,received_at=$11,
             committed_at=now(),stream_state='connected',error_code=NULL,
@@ -100,7 +118,7 @@ async def archive_batch(observer,epoch,generation,changes,rank,tag):
     async with pool.acquire() as conn,conn.transaction():
         row=await conn.fetchrow('SELECT * FROM routing_observers WHERE id=$1 FOR UPDATE',observer['id'])
         if row['epoch']!=epoch or row['generation']!=generation:raise RuntimeError('Observer session changed during archive import')
-        await conn.executemany(UPSERT,[route_row(observer['id'],item,row,rank,f'{tag}:{i:020d}') for i,item in changes])
+        await conn.executemany(UPSERT,consolidate_routes(route_row(observer['id'],item,row,rank,f'{tag}:{i:020d}') for i,item in changes))
 
 async def finalize_snapshot(conn,observer,epoch,generation,at,url):
     """A complete snapshot supersedes pre-snapshot live entries absent from it.
