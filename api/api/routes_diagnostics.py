@@ -84,6 +84,8 @@ async def read_status(pool,collector='all'):
         elif any(r['input_state']=='stale' for r in observers):state='input_stale'
         elif any(r['input_state']!='fresh' for r in observers):state='input_unavailable'
         elif any(r['consumer_state']=='catching_up' for r in observers):state='catching_up'
+    if state=='running' and p.get('retention_mode')=='partitioned':
+        if p.get('retention_error') or not p.get('retention_checked_at') or (now-p['retention_checked_at']).total_seconds()>3600:state='retention_degraded'
     return {'state':state,'as_of':now,'policy':p,'observers':observers,'recent_gaps':[dict(g) for g in gaps[:50]],
         'gaps_capped':len(gaps)>50,'gap_scope':'Source-level gaps for selected peers in the last 24 hours; affected ASN/prefix scope is unknown.',
         'limits':LIMITS}
@@ -120,13 +122,17 @@ def history_item(row):
 
 @router.get('/history')
 async def history(asn:int|None=Query(None,ge=1,le=4294967295),resource:str|None=Query(None,max_length=49),
-    minutes:int=Query(60,ge=5,le=1440),family:Literal['all','4','6']='all',collector:str=Query('all',max_length=64),
-    cursor:uuid.UUID|None=None,limit:int=Query(50,ge=1,le=100)):
+    minutes:int=Query(60,ge=5,le=20160),family:Literal['all','4','6']='all',collector:str=Query('all',max_length=64),
+    cursor:uuid.UUID|None=None,limit:int=Query(50,ge=1,le=100),until:datetime|None=None):
     requested=resource_value(resource)
     if not asn and not requested:raise HTTPException(422,'Choose an ASN, prefix or IP for routing history')
     from api.routes_noc import COLLECTORS
     if collector!='all' and collector not in COLLECTORS:raise HTTPException(422,'Unknown collector')
-    scope={'asn':asn,'resource':str(requested) if requested else None,'minutes':minutes,'family':family,'collector':collector}
+    if until is not None:
+        if until.tzinfo is None:raise HTTPException(422,'Window end requires UTC or an explicit offset')
+        until=until.astimezone(timezone.utc)
+        if until>datetime.now(timezone.utc):raise HTTPException(422,'Window end cannot be in the future')
+    scope={'asn':asn,'resource':str(requested) if requested else None,'minutes':minutes,'family':family,'collector':collector,'until':until.isoformat() if until else None}
     try:
         pool=await get_pg_pool();cache=await get_redis()
         policy=await pool.fetchrow('SELECT retention_hours FROM routing_diagnostic_policy WHERE id')
@@ -135,7 +141,7 @@ async def history(asn:int|None=Query(None,ge=1,le=4294967295),resource:str|None=
             saved=await cache.get('noc:history:'+str(cursor))
             if not saved:raise HTTPException(409,'History page expired. Refresh history.')
             snap=json.loads(saved)
-            if snap['scope']!=scope:raise HTTPException(422,'History page belongs to different filters')
+            if {**snap['scope'],'until':snap['scope'].get('until')}!=scope:raise HTTPException(422,'History page belongs to different filters')
             if datetime.now(timezone.utc)>=datetime.fromisoformat(snap['expires_at']) or retention_hours<snap['retention_hours']:
                 raise HTTPException(409,'History page expired or retention changed. Refresh history.')
         else:
@@ -144,15 +150,32 @@ async def history(asn:int|None=Query(None,ge=1,le=4294967295),resource:str|None=
             heads=await pool.fetch('SELECT observer,sequence FROM routing_diagnostic_cursors')
             now=datetime.now(timezone.utc)
             snap={'scope':scope,'as_of':now.isoformat(),'expires_at':(now+timedelta(seconds=PAGE_TTL)).isoformat(),'retention_hours':retention_hours,'heads':{r['observer']:r['sequence'] for r in heads}}
-        now=datetime.fromisoformat(snap['as_of']);args=[now-timedelta(minutes=min(minutes,snap['retention_hours']*60)),now,json.dumps(snap['heads'])]
+        now=datetime.fromisoformat(snap['as_of'])
+        through=until or now
+        requested_from=through-timedelta(minutes=minutes)
+        floor=now-timedelta(hours=snap['retention_hours'])
+        effective_from=max(requested_from,floor)
+        # An old window remains explicitly empty; it never expands to current data.
+        outside=through<=floor
+        args=[effective_from,through,json.dumps(snap['heads'])]
         clauses=['e.event_at>$1','e.event_at<=$2',"e.sequence<=COALESCE(($3::jsonb->>e.observer)::bigint,-1)"]+filters(args,asn,requested,family,collector)
         if snap.get('after'):
             args.extend([datetime.fromisoformat(snap['after'][0]),snap['after'][1]])
             clauses.append(f'(e.event_at,e.id)<(${len(args)-1},${len(args)})')
         args.append(limit+1)
-        rows=await pool.fetch('''SELECT e.id,e.event_id::text,e.observer,e.sequence,e.epoch,e.event_at,e.received_at,
+        select='''SELECT e.id,e.event_id::text,e.observer,e.sequence,e.epoch,e.event_at,e.received_at,
            e.prefix::text prefix,e.kind,e.candidate,e.origin_asn,e.expected_asn,e.evidence,o.collector,o.peer_asn
-           FROM routing_diagnostic_events e JOIN routing_observers o ON o.id=e.observer WHERE '''+' AND '.join(clauses)+f' ORDER BY e.event_at DESC,e.id DESC LIMIT ${len(args)}',*args)
+           FROM routing_diagnostic_events e JOIN routing_observers o ON o.id=e.observer WHERE '''+' AND '.join(clauses)
+        if requested:
+            # Keep resource-indexable rows separate from the aggregate withdrawal
+            # evidence. An OR with JSON prefix expansion otherwise scans history.
+            # Both branches retain the same complete ASN/resource correlation filter.
+            args.append(str(requested));resource_param='$'+str(len(args))
+            op='<<=' if hasattr(requested,'prefixlen') else '>>='
+            order=f' ORDER BY e.event_at DESC,e.id DESC LIMIT ${len(args)-1}'
+            query='('+select+f" AND e.candidate IS DISTINCT FROM 'withdrawal_surge' AND e.prefix {op} {resource_param}::text::inet"+order+') UNION ALL ('+select+" AND e.candidate='withdrawal_surge'"+order+f') ORDER BY event_at DESC,id DESC LIMIT ${len(args)-1}'
+        else:query=select+f' ORDER BY e.event_at DESC,e.id DESC LIMIT ${len(args)}'
+        rows=await pool.fetch(query,*args)
         next_cursor=None
         if datetime.now(timezone.utc)>=datetime.fromisoformat(snap['expires_at']):
             raise HTTPException(409,'History page expired. Refresh history.')
@@ -160,7 +183,14 @@ async def history(asn:int|None=Query(None,ge=1,le=4294967295),resource:str|None=
             last=rows[limit-1];snap['after']=[last['event_at'].isoformat(),last['id']];next_cursor=str(uuid.uuid4())
             ttl=max(1,int((datetime.fromisoformat(snap['expires_at'])-datetime.now(timezone.utc)).total_seconds()))
             await cache.setex('noc:history:'+next_cursor,ttl,json.dumps(snap))
-        return {'as_of':now,'scope':scope,'items':[history_item(r) for r in rows[:limit]],'next_cursor':next_cursor,
+        history_gaps=await pool.fetch('''SELECT g.observer,g.opened_at,g.from_at,g.until_at,g.reason,g.state,g.repaired_at
+          FROM routing_gaps g JOIN routing_observers o ON o.id=g.observer
+          WHERE g.observer=ANY($1::text[]) AND ($2='all' OR o.collector=$2)
+          AND COALESCE(g.from_at,g.opened_at)<=$4 AND COALESCE(g.until_at,clock_timestamp())>=$3
+          ORDER BY COALESCE(g.from_at,g.opened_at) DESC LIMIT 101''',list(snap['heads']),collector,effective_from,through) if not outside else []
+        return {'history_gaps':[dict(g) for g in history_gaps[:100]],'history_gaps_capped':len(history_gaps)>100,
+            'history_gap_scope':'Source-level gaps overlapping this historical period; affected ASN/prefix scope is unknown. Gap repair status is current, independent of the pinned history snapshot.',
+            'as_of':now,'scope':scope,'requested_window':{'from':requested_from,'through':through},'effective_window':None if outside else {'from':effective_from,'through':through},'retention_clipped':requested_from<floor,'outside_retention':outside,'items':[history_item(r) for r in rows[:limit]],'next_cursor':next_cursor,
             'coverage':await read_status(pool,collector),'limits':LIMITS+['Pages hold committed observer checkpoints for five minutes from the first page. Retention cleanup protects that window; expired pages require refresh.']}
     except HTTPException:raise
     except Exception:raise HTTPException(503,'Routing history unavailable; no health conclusion can be made') from None

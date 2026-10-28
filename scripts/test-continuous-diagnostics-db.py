@@ -11,7 +11,7 @@ from fastapi import FastAPI
 from collectors.routing_diagnostic_worker import process_frames,cycle,maintenance,DiagnosticInputError
 import collectors.routing_diagnostic_worker as worker
 import api.routes_diagnostics as api
-DB='inet_diag_qa_20261027';UTC=timezone.utc
+DB=os.environ.get('INET_DIAGNOSTICS_QA_DATABASE','inet_diag_qa_20261027');assert DB=='inet_diag_qa_20261027' or DB.startswith('inet_ret14_qa_');UTC=timezone.utc
 async def main():
  from urllib.parse import urlsplit
  assert urlsplit(os.environ['TIMESCALE_DSN']).path=='/'+DB

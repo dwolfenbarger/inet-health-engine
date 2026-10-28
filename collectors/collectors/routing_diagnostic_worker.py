@@ -93,7 +93,7 @@ async def process_frames(conn,observer,cursor,frames,gaps):
         await conn.executemany('''INSERT INTO routing_diagnostic_events(event_id,observer,sequence,ordinal,epoch,
       event_at,received_at,prefix,kind,candidate,origin_asn,expected_asn,involved_asns,evidence)
       VALUES($1,$2,$3,$4,$5,$6,$7,$8::text::cidr,$9,$10,$11,$12,$13,$14::jsonb)
-      ON CONFLICT(event_id) DO NOTHING''',events_out)
+      ON CONFLICT(event_id,event_at) DO NOTHING''',events_out)
     if dirty:
         await conn.executemany('''INSERT INTO routing_diagnostic_state(observer,prefix,observed_at,state)
           VALUES($1,$2::text::cidr,$3,$4::jsonb) ON CONFLICT(observer,prefix) DO UPDATE SET observed_at=excluded.observed_at,state=excluded.state''',
@@ -138,9 +138,15 @@ async def maintenance(pool):
     # Bounded batches keep expiry from monopolizing the database.
     # The page TTL is absolute from the first page. This grace protects every
     # row within a pinned page's effective retention window until it expires.
-    for table,col,seconds in [('routing_diagnostic_events','event_at',policy['retention_hours']*3600+PAGE_TTL),('routing_diagnostic_state','observed_at',86400),('routing_diagnostic_origins','observed_at',600)]:
+    partitioned=await pool.fetchval("SELECT relkind='p' FROM pg_class WHERE oid='public.routing_diagnostic_events'::regclass")
+    expiry=[('routing_diagnostic_state','observed_at',86400),('routing_diagnostic_origins','observed_at',600)]
+    if not partitioned:expiry.insert(0,('routing_diagnostic_events','event_at',policy['retention_hours']*3600+PAGE_TTL))
+    for table,col,seconds in expiry:
         await pool.execute(f'DELETE FROM {table} WHERE ctid IN (SELECT ctid FROM {table} WHERE {col}<now()-make_interval(secs=>$1) LIMIT 10000)',float(seconds))
-    size=await pool.fetchval("SELECT sum(pg_total_relation_size(oid)) FROM pg_class WHERE relname=ANY($1::text[]) AND relkind='r'",['routing_diagnostic_events','routing_diagnostic_state','routing_diagnostic_origins','routing_diagnostic_cursors'])
+    size=await pool.fetchval("""WITH RECURSIVE owned(oid) AS (
+      SELECT oid FROM pg_class WHERE relnamespace='public'::regnamespace AND relname=ANY($1::text[])
+      UNION ALL SELECT i.inhrelid FROM pg_inherits i JOIN owned o ON o.oid=i.inhparent)
+      SELECT coalesce(sum(pg_total_relation_size(c.oid)),0)::bigint FROM owned JOIN pg_class c USING(oid) WHERE c.relkind='r'""",['routing_diagnostic_events','routing_diagnostic_state','routing_diagnostic_origins','routing_diagnostic_cursors'])
     ready=size<policy['max_bytes'] and shutil.disk_usage('/').free>policy['root_reserve']
     await pool.execute("UPDATE routing_diagnostic_policy SET state=$1,checked_at=now(),measured_bytes=$2 WHERE id",'running' if ready else 'capacity_paused',size)
     return ready
