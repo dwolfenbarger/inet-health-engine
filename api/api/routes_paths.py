@@ -12,6 +12,7 @@ from api.routes_catalogue import generation, ensure_retained, fingerprint, encod
 from api.routes_routing import read_observers
 from api.routes_diagnostics import PAGE_TTL, read_status, history_item
 from api.path_evidence import as_segment, evidence_pairs
+from api.path_queries import snapshot_lpm_query
 
 router = APIRouter(prefix='/paths', tags=['path-investigations'])
 UTC = timezone.utc
@@ -74,13 +75,8 @@ async def routes(source_asn:int=Query(...,ge=1,le=4294967295),
         # A resource lookup shows the actual route even when the requested ASNs
         # disagree. In particular, LPM happens BEFORE source/origin matching.
         if parsed is not None and not hasattr(parsed, 'prefixlen'):
-            base = 'SELECT DISTINCT ON (r.observer) r.*,r.prefix::text prefix_text FROM inet_catalog.routes r WHERE '
-            base += ' AND '.join(clauses)+' ORDER BY r.observer,masklen(r.prefix) DESC,r.prefix'
-            outer = ''
-            if page:
-                args.extend(page[1:3]);outer = f' WHERE (observer,prefix)>(${len(args)-1}::text,${len(args)}::text::cidr)'
-            args.append(limit+1)
-            rows = await pool.fetch('SELECT * FROM ('+base+') selected'+outer+f' ORDER BY observer,prefix LIMIT ${len(args)}', *args)
+            query,values=snapshot_lpm_query(pool,g,normalized,collector,page[1:3] if page else None,limit+1)
+            rows=await native.fetch(query,*values)
         else:
             if page:
                 args.extend(page[1:3]);clauses.append(f'(r.observer,r.prefix)>(${len(args)-1}::text,${len(args)}::text::cidr)')
@@ -151,11 +147,14 @@ async def history(source_asn:int=Query(...,ge=1,le=4294967295),destination_asn:i
         else:
             now=datetime.now(UTC);heads=await pool.fetch('SELECT observer,sequence FROM routing_diagnostic_cursors')
             snap={'scope':scope,'as_of':now.isoformat(),'expires_at':(now+timedelta(seconds=PAGE_TTL)).isoformat(),
-                  'retention_hours':hours,'heads':{r['observer']:r['sequence'] for r in heads}}
+                  'retention_hours':hours,'heads':{r['observer']:r['sequence'] for r in heads},'scan_version':2,'scan_step':0}
         captured=datetime.fromisoformat(snap['as_of']);through=until or captured
         requested_from=through-timedelta(minutes=minutes);floor=captured-timedelta(hours=snap['retention_hours'])
         lower=max(requested_from,floor);outside=through<=floor
-        args=[lower,through,json.dumps(snap['heads']),[source_asn,destination_asn]]
+        scan_through=datetime.fromisoformat(snap['scan_through']) if snap.get('scan_through') else through
+        scan_width=[3600,21600,86400,259200,1209600][min(4,snap.get('scan_step',0))]
+        scan_lower=max(lower,scan_through-timedelta(seconds=scan_width)) if snap.get('scan_version')==2 else lower
+        args=[scan_lower,scan_through,json.dumps(snap['heads']),[source_asn,destination_asn]]
         clauses=['e.event_at>$1','e.event_at<=$2',"e.sequence<=COALESCE(($3::jsonb->>e.observer)::bigint,-1)",'e.involved_asns @> $4::bigint[]']
         if collector!='all':args.append(collector);clauses.append(f'o.collector=${len(args)}')
         if snap.get('after'):
@@ -189,10 +188,17 @@ async def history(source_asn:int=Query(...,ge=1,le=4294967295),destination_asn:i
                 items.append(item)
             last=row
         if len(raw)>budget:more=True
+        # New captures scan recent partitions first, then progressively older
+        # ranges. Existing v1 cursors keep their original global query contract.
+        advance=bool(snap.get('scan_version')==2 and not more and scan_lower>lower and not outside)
+        if advance:more=True
         if datetime.now(UTC)>=datetime.fromisoformat(snap['expires_at']):raise HTTPException(409,'Path history page expired; refresh')
         next_cursor=None
-        if more and last:
-            snap['after']=[last['event_at'].isoformat(),last['id']];next_cursor=str(uuid.uuid4())
+        if more and (last or advance):
+            if advance:
+                snap.pop('after',None);snap['scan_through']=scan_lower.isoformat();snap['scan_step']=min(4,snap.get('scan_step',0)+1)
+            else:snap['after']=[last['event_at'].isoformat(),last['id']]
+            next_cursor=str(uuid.uuid4())
             ttl=max(1,int((datetime.fromisoformat(snap['expires_at'])-datetime.now(UTC)).total_seconds()))
             await cache.setex('noc:paths-history:'+next_cursor,ttl,json.dumps(snap))
         gaps=await pool.fetch('''SELECT observer,opened_at,from_at,until_at,reason,state,repaired_at
@@ -203,6 +209,7 @@ async def history(source_asn:int=Query(...,ge=1,le=4294967295),destination_asn:i
         candidates={kind:sum(i['candidate']==kind for i in items) for kind in ['bgp_flap','bgp_hijack','withdrawal_surge']}
         return {'scope':scope,'as_of':snap['as_of'],'expires_at':snap['expires_at'],'items':items,
                 'next_cursor':next_cursor,'scanned_rows':scanned,'scan_budget':budget,
+                'scan_window':{'from':scan_lower,'through':scan_through},
                 'requested_window':{'from':requested_from,'through':through},'effective_window':None if outside else {'from':lower,'through':through},
                 'retention_clipped':requested_from<floor,'outside_retention':outside,
                 'coverage':await read_status(pool,collector),'history_gaps':[dict(g) for g in gaps[:100]],'history_gaps_capped':len(gaps)>100,

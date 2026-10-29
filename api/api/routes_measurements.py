@@ -12,6 +12,7 @@ from fastapi import APIRouter,HTTPException,Query
 from api.deps import get_pg_pool,get_redis
 from api.path_evidence import trace_observation,ping_observation,compare_traces,valid_asn
 from api.routes_routing import quality
+from api.path_queries import live_lpm_query
 
 router=APIRouter(prefix='/paths',tags=['measured-path-investigations'])
 BASE='https://atlas.ripe.net/api/v2/'
@@ -117,14 +118,8 @@ async def origin_hint(pool,address):
     if saved:return json.loads(saved)
     async with _mapping_slots:
         try:
-            rows=await pool.fetch('''SELECT * FROM (
-              SELECT DISTINCT ON (r.observer) r.observer,r.origin_asn,r.prefix::text prefix,r.event_at,
-               o.baseline_state,o.error_code,o.mode,o.peer_state,o.stream_state,o.received_at,o.event_at observer_event_at,
-               EXISTS(SELECT 1 FROM routing_gaps g WHERE g.observer=o.id AND g.state NOT IN ('repaired','snapshot_superseded')) pending
-              FROM routing_routes r JOIN routing_observers o ON o.id=r.observer
-              WHERE r.present AND r.epoch=o.epoch AND r.generation=o.generation AND r.prefix>>=$1::text::inet
-              ORDER BY r.observer,masklen(r.prefix) DESC,r.prefix
-              ) lpm ORDER BY observer LIMIT 17''',address,timeout=2)
+            query,args=live_lpm_query(address)
+            rows=await pool.fetch(query,*args,timeout=2)
             now=datetime.now(UTC);views=[]
             for row in rows[:16]:
                 views.append({'observer':row['observer'],'prefix':row['prefix'],'origin_asn':row['origin_asn'],
