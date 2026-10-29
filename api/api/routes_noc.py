@@ -267,3 +267,8 @@ router.include_router(issues_router)
 
 from api.routes_diagnostics import router as diagnostics_router
 router.include_router(diagnostics_router)
+
+from api.routes_paths import router as paths_router
+from api.routes_measurements import router as measurements_router
+router.include_router(paths_router)
+router.include_router(measurements_router)
