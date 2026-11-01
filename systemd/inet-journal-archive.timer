@@ -1,0 +1,10 @@
+[Unit]
+Description=Archive INET journals from their owning guest
+[Timer]
+OnBootSec=3min
+OnUnitInactiveSec=5min
+AccuracySec=15s
+Persistent=true
+Unit=inet-journal-archive.service
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,23 @@
+[Unit]
+Description=INET private guest-owned journal archival
+After=network-online.target postgresql@17-main.service
+ConditionPathIsMountPoint=/var/lib/inet-archive-private/nas
+[Service]
+Type=oneshot
+User=postgres
+Group=postgres
+SupplementaryGroups=1000
+Environment=PYTHONPATH=/opt/inet-journal-runtime/vendor
+ExecStart=/usr/bin/python3 -u /opt/inet-journal-runtime/scripts/rotate-journal-guest.py
+UMask=0007
+MemoryMax=512M
+CPUQuota=100%
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=3600
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/inet-archive-private/nas /var/lib/inet-health/journal-export
